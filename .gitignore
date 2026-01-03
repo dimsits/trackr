@@ -1,0 +1,75 @@
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# =========================
+# Logs
+# =========================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Node / Package managers
+# =========================
+node_modules/
+.pnpm-store/
+
+# =========================
+# Turborepo
+# =========================
+.turbo/
+
+# =========================
+# Next.js
+# =========================
+.next/
+out/
+apps/web/.next/
+apps/web/out/
+
+# =========================
+# NestJS
+# =========================
+dist/
+apps/api/dist/
+
+# =========================
+# Prisma
+# =========================
+packages/db/prisma/migrations/
+packages/db/prisma/dev.db
+packages/db/prisma/*.db
+
+# =========================
+# Coverage / Tests
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# Build artifacts
+# =========================
+build/
+.cache/
+
+# =========================
+# Misc
+# =========================
+*.log
+*.tmp
+*.swp
