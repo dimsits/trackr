@@ -1,6 +1,14 @@
-# Tracker
+# Trackr
 
-A **pipeline-based CRM** for personal applications: you create pipelines (e.g., *Interested → Applied → Interview → Offer → Rejected*), drag cards, attach notes/files, schedule reminders, and track outcomes.
+**Trackr** is a **lightweight web app** that helps **students and professionals** organize, track, and manage their **job or OJT applications** through a **simple, visual pipeline**.
+
+Users can create custom pipelines (e.g., *Interested → Applied → Interview → Offer → Rejected*), drag application cards between stages, attach notes and files, schedule reminders, and track outcomes — all in one focused workspace.
+
+Trackr is designed to be:
+
+* **Fast and intuitive** (drag-and-drop first)
+* **Personal by default**, with optional team support
+* **Opinionated but flexible**, avoiding enterprise CRM bloat
 
 ---
 
@@ -9,10 +17,10 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 ### Context
 
 * Users manage **Applications** inside **Workspaces**
-* Each workspace has **Pipelines** (columns/stages)
-* Each application has **Activities** (notes, emails, interviews), **Tasks/Reminders**, and optional **Files**
+* Each workspace contains one or more **Pipelines** (columns/stages)
+* Each application can have **Activities** (notes, emails, interviews), **Tasks/Reminders**, and optional **Files**
 
-### Container diagram 
+### Container diagram
 
 ```
 [Web/Mobile Client]
@@ -34,59 +42,74 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 
 ---
 
-## 3) Core modules 
+## 3) Core modules
 
 ### Frontend (Client)
 
-* **UI:** Kanban pipeline board (drag/drop), list view, calendar/reminders, analytics
-* **State:** optimistic updates (drag card → update instantly, rollback on failure)
-* **Offline-friendly (optional):** local cache + background sync (big plus)
+* **UI:** Kanban-style pipeline board (drag/drop), list view, calendar/reminders, analytics
+* **State management:** Optimistic updates (drag card → instant UI update, rollback on failure)
+* **Offline-friendly (optional):** Local cache with background sync
 
 ### Backend (API / BFF)
 
 1. **Auth & Identity**
 
-   * Email+password or magic link, OAuth (Google)
-   * Sessions via JWT or server sessions
+   * Email + password or magic link
+   * OAuth (e.g., Google)
+   * Sessions via JWT or server-side sessions
+
 2. **Workspace & Membership**
 
    * Personal workspace by default
-   * Optional team mode (RBAC)
+   * Optional team mode with role-based access control (RBAC)
+
 3. **Pipeline**
 
-   * Pipeline templates, stages/columns, ordering
+   * Pipeline templates
+   * Configurable stages/columns
+   * Stage ordering and customization
+
 4. **Application**
 
-   * Company, role, source, salary range, links, status(stage), priority
+   * Company, role, source, salary range, links
+   * Current stage and priority
+
 5. **Activity Feed**
 
-   * Notes, interview logs, call logs, “moved stage” events
+   * Notes, interview logs, call logs
+   * System events such as “moved stage”
+
 6. **Tasks & Reminders**
 
-   * follow-ups, interview schedules, deadlines
+   * Follow-ups, interview schedules, deadlines
+
 7. **Files**
 
-   * resume versions, cover letters, screenshots (stored in object storage)
+   * Resumes, cover letters, screenshots
+   * Stored in object storage
+
 8. **Integrations (optional)**
 
-   * Calendar sync, email parsing, job boards import
+   * Calendar sync
+   * Email parsing
+   * Job board imports
 
 ### Worker (Async jobs)
 
-* Send reminders (email/push)
+* Send reminders (email/push notifications)
 * Cleanup expired uploads
 * Generate analytics snapshots
-* Webhook delivery (if integrations)
+* Deliver webhooks for integrations
 
 ---
 
-## 4) Data model 
+## 4) Data model
 
 ### Key entities
 
 * **User**(id, name, email, hashed_pw, created_at)
 * **Workspace**(id, owner_id, name)
-* **Membership**(workspace_id, user_id, role)  // optional team support
+* **Membership**(workspace_id, user_id, role)
 * **Pipeline**(id, workspace_id, name, is_default)
 * **Stage**(id, pipeline_id, name, position, color)
 * **Application**
@@ -96,7 +119,7 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 * **Activity**
 
   * (id, application_id, type, content, created_at, created_by)
-  * types: NOTE | STAGE_MOVED | INTERVIEW | EMAIL | CALL | OFFER
+  * types: `NOTE | STAGE_MOVED | INTERVIEW | EMAIL | CALL | OFFER`
 * **Task**
 
   * (id, workspace_id, application_id, title, due_at, status, created_at)
@@ -106,15 +129,15 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 
 ### Important constraints
 
-* Stage ordering via `position`
-* Application in exactly one `stage_id`
-* Soft-delete (deleted_at) is a plus for real product feel
+* Stage ordering is controlled via `position`
+* An application belongs to exactly one `stage_id`
+* Soft deletes (`deleted_at`) are recommended for auditability and analytics
 
 ---
 
-## 5) API design 
+## 5) API design
 
-### REST-style endpoints 
+### REST-style endpoints
 
 **Auth**
 
@@ -133,13 +156,13 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 * `GET /workspaces/:id/pipelines`
 * `POST /workspaces/:id/pipelines`
 * `PATCH /pipelines/:id`
-* `POST /pipelines/:id/stages` (reorder included)
+* `POST /pipelines/:id/stages` (includes reordering)
 
 **Applications**
 
 * `GET /workspaces/:id/applications?pipelineId=&stageId=&q=`
 * `POST /workspaces/:id/applications`
-* `PATCH /applications/:id` (includes moving stage)
+* `PATCH /applications/:id` (including stage movement)
 * `DELETE /applications/:id`
 
 **Activities**
@@ -155,11 +178,11 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 
 **Files**
 
-* `POST /files/upload-url` (pre-signed upload)
+* `POST /files/upload-url`
 * `POST /applications/:id/files`
 * `GET /files/:id/download-url`
 
-### Realtime 
+### Realtime
 
 * WS/SSE channel: `workspace:{id}`
 * Events:
@@ -171,21 +194,28 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 
 ---
 
-## 6) Drag-and-drop correctness 
+## 6) Drag-and-drop correctness
 
+### Frontend
 
-**Frontend**
+* Perform optimistic UI updates
+* Call:
 
-* Optimistic update local state
-* Call `PATCH /applications/:id { stage_id: newStageId, position: newPos }`
+  ```
+  PATCH /applications/:id
+  {
+    stage_id: newStageId,
+    position: newPos
+  }
+  ```
 
-**Backend**
+### Backend
 
-* Transaction:
+* Execute a transaction:
 
   * Update application stage
-  * Recompute positions in affected stage (or use fractional indexing)
-  * Insert Activity event `STAGE_MOVED`
+  * Recompute positions in the affected stage (or use fractional indexing)
+  * Insert an `Activity` event of type `STAGE_MOVED`
 
 ---
 
@@ -193,12 +223,11 @@ A **pipeline-based CRM** for personal applications: you create pipelines (e.g., 
 
 ### Minimal approach
 
-* Store tasks with `due_at`
-* Worker runs every minute:
+* Store tasks with a `due_at` timestamp
+* Background worker runs every minute:
 
-  * find tasks due soon
-  * send email/push
-  * mark as notified
-
+  * Find tasks due soon
+  * Send email or push notifications
+  * Mark tasks as notified
 
 
