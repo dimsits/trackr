@@ -1,17 +1,26 @@
 {
   "name": "trackr",
-  "private": true,
-  "packageManager": "pnpm@9.0.0",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "typecheck": "turbo typecheck",
-    "db:push": "pnpm --filter @trackr/db db:push",
-    "db:migrate": "pnpm --filter @trackr/db db:migrate",
-    "db:studio": "pnpm --filter @trackr/db db:studio"
+    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "cd ./apps/backend && npm run start",
+    "dev:frontend": "cd ./apps/frontend && npm run dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {
-    "turbo": "^2.0.0"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimsits/trackr.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dimsits/trackr/issues"
+  },
+  "homepage": "https://github.com/dimsits/trackr#readme",
+  "dependencies": {
+    "concurrently": "^9.2.1"
   }
 }
