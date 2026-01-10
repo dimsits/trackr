@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { TestController } from './test/test.controller';
 import { TestModule } from './test/test.module';
+import { WorkspaceAccessModule } from './workspace-access/workspace-access.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { TestModule } from './test/test.module';
     HealthModule,
     AuthModule,
     TestModule,
+    WorkspaceAccessModule,
   ],
   controllers: [AppController, TestController],
   providers: [AppService],
