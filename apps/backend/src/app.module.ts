@@ -8,6 +8,9 @@ import { AuthModule } from './auth/auth.module';
 import { TestController } from './test/test.controller';
 import { TestModule } from './test/test.module';
 import { WorkspaceAccessModule } from './workspace-access/workspace-access.module';
+import { ServiceModule } from './controller/service/service.module';
+import { WorkspacesController } from './workspaces/workspaces.controller';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
   imports: [
@@ -17,6 +20,8 @@ import { WorkspaceAccessModule } from './workspace-access/workspace-access.modul
     AuthModule,
     TestModule,
     WorkspaceAccessModule,
+    ServiceModule,
+    WorkspacesModule,
   ],
   controllers: [AppController, TestController],
   providers: [AppService],
