@@ -11,6 +11,10 @@ import { WorkspaceAccessModule } from './workspace-access/workspace-access.modul
 import { ServiceModule } from './controller/service/service.module';
 import { WorkspacesController } from './workspaces/workspaces.controller';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { PipelinesModule } from './pipelines/pipelines.module';
+import { StagesModule } from './stages/stages.module';
+import { ApplicationsModule } from './applications/applications.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   imports: [
@@ -22,6 +26,10 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     WorkspaceAccessModule,
     ServiceModule,
     WorkspacesModule,
+    PipelinesModule,
+    StagesModule,
+    ApplicationsModule,
+    ActivitiesModule,
   ],
   controllers: [AppController, TestController],
   providers: [AppService],
