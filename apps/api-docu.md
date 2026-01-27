@@ -1,14 +1,3 @@
-Below is a **full, clean, copy-paste–ready Markdown API document** derived **directly and exhaustively** from the Swagger/OAS content you provided.
-No fluff, no omissions, frontend-ready.
-
-You can save this as:
-
-```
-/docs/API.md
-```
-
----
-
 # Trackr API Documentation
 
 **Version:** 1.0
