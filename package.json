@@ -22,5 +22,8 @@
   "homepage": "https://github.com/dimsits/trackr#readme",
   "dependencies": {
     "concurrently": "^9.2.1"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
   }
 }

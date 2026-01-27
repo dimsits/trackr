@@ -16,6 +16,7 @@ import { StagesModule } from './stages/stages.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { TasksModule } from './tasks/tasks.module';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { TasksModule } from './tasks/tasks.module';
     ApplicationsModule,
     ActivitiesModule,
     TasksModule,
+    FilesModule,
   ],
   controllers: [AppController, TestController],
   providers: [AppService],
