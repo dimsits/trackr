@@ -19,13 +19,7 @@ All APIs assume **authenticated users** and **workspace-scoped authorization**.
 
 ### Development Authentication
 
-Most protected endpoints require the following header:
-
-```
-x-user-id: <uuid>
-```
-
-> This is a development mechanism. In production, this will be replaced by JWT/session-based auth.
+JWT/Session-based Auth
 
 ---
 
