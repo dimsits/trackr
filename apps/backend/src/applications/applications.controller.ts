@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiHeader, ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
-import { DevAuthGuard } from '../auth/dev-auth/dev-auth.guard';
+import { ApiHeader, ApiOkResponse, ApiParam, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 import { WorkspaceAccessService } from '../workspace-access/workspace-access.service';
@@ -10,8 +10,8 @@ import { UpdateApplicationDto } from './dto/update-application.dto';
 import { ListApplicationsQuery } from './dto/list-application.query';
 
 @ApiTags('Applications')
-@ApiHeader({ name: 'x-user-id', required: true })
-@UseGuards(DevAuthGuard)
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller()
 export class ApplicationsController {
   constructor(

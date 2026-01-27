@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiHeader, ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
-import { DevAuthGuard } from '../auth/dev-auth/dev-auth.guard';
+import { ApiHeader, ApiOkResponse, ApiParam, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 import { WorkspaceAccessService } from '../workspace-access/workspace-access.service';
@@ -8,8 +8,8 @@ import { WorkspacesService } from './workspaces.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 
 @ApiTags('Workspaces')
-@ApiHeader({ name: 'x-user-id', required: true })
-@UseGuards(DevAuthGuard)
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller('workspaces')
 export class WorkspacesController {
   constructor(

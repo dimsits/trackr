@@ -8,10 +8,10 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiHeader, ApiOkResponse, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiOkResponse, ApiParam, ApiQuery, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TaskStatus } from '@prisma/client';
 
-import { DevAuthGuard } from '../auth/dev-auth/dev-auth.guard';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 
@@ -21,8 +21,8 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @ApiTags('Tasks')
-@ApiHeader({ name: 'x-user-id', required: true })
-@UseGuards(DevAuthGuard)
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller()
 export class TasksController {
   constructor(

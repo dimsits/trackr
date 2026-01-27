@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import bcrypt from 'bcrypt';
 
 function getPrisma() {
   const connectionString = process.env.DATABASE_URL;
@@ -16,9 +17,14 @@ async function main() {
   // ---- CONFIG (edit these if you want) ----
   const seedEmail = 'seed@trackr.dev';
   const seedName = 'Seed User';
+  const seedPassword = 'password123'; 
   const workspaceName = 'Personal';
   const pipelineName = 'Default';
   const stages = ['Interested', 'Applied', 'Interview', 'Offer', 'Rejected'];
+  const hashed = await bcrypt.hash(seedPassword, 10);
+
+  
+
 
   // ---- 1) User (idempotent) ----
   const user = await prisma.user.upsert({
@@ -26,11 +32,12 @@ async function main() {
     update: {
       name: seedName,
       deletedAt: null,
+      hashedPw: hashed,
     },
     create: {
       email: seedEmail,
       name: seedName,
-      // hashedPw: '...' // leave null for now
+      hashedPw: hashed,
     },
   });
 

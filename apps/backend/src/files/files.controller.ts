@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards, HttpCode } from '@nestjs/common';
-import { ApiHeader, ApiNoContentResponse, ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
-import { DevAuthGuard } from '../auth/dev-auth/dev-auth.guard';
+import { ApiHeader, ApiNoContentResponse, ApiOkResponse, ApiParam, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 import { FilesService } from './files.service';
@@ -8,8 +8,8 @@ import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
 import { RegisterFileDto } from './dto/register-file.dto';
 
 @ApiTags('Files')
-@ApiHeader({ name: 'x-user-id', required: true })
-@UseGuards(DevAuthGuard)
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
 @Controller()
 export class FilesController {
   constructor(private readonly files: FilesService) {}

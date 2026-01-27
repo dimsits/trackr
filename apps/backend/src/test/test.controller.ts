@@ -1,6 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
-import { DevAuthGuard } from '../auth/dev-auth/dev-auth.guard';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 import { WorkspaceAccessService } from '../workspace-access/workspace-access.service';
@@ -8,7 +8,7 @@ import { WorkspaceRole } from '@prisma/client';
 
 @ApiTags('Test')
 @ApiHeader({ name: 'x-user-id', required: true })
-@UseGuards(DevAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('test')
 export class TestController {
   constructor(private readonly access: WorkspaceAccessService) {}

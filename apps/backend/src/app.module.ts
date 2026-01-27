@@ -17,10 +17,11 @@ import { ApplicationsModule } from './applications/applications.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { TasksModule } from './tasks/tasks.module';
 import { FilesModule } from './files/files.module';
+import { MeController } from './me/me.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env'], }),
     PrismaModule,
     HealthModule,
     AuthModule,
@@ -35,7 +36,7 @@ import { FilesModule } from './files/files.module';
     TasksModule,
     FilesModule,
   ],
-  controllers: [AppController, TestController],
+  controllers: [AppController, TestController, MeController],
   providers: [AppService],
 })
 export class AppModule {}

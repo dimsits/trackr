@@ -1,16 +1,18 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiHeader, ApiTags } from '@nestjs/swagger';
-import { DevAuthGuard } from './dev-auth/dev-auth.guard';
-import { CurrentUser } from './current-user/current-user.decorator';
-import type { CurrentUserPayload } from './current-user/current-user.decorator';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('Auth')
-@Controller()
+@Controller('auth')
 export class AuthController {
-  @Get('me')
-  @UseGuards(DevAuthGuard)
-  @ApiHeader({ name: 'x-user-id', required: true })
-  me(@CurrentUser() user: CurrentUserPayload) {
-    return user;
+  constructor(private readonly auth: AuthService) {}
+
+  @Post('login')
+  @ApiOkResponse({ description: 'Returns an access token' })
+  login(@Body() dto: LoginDto) {
+    return this.auth.login(dto.email, dto.password);
   }
+
+  // /auth/logout is optional for JWT (client just discards token)
 }
