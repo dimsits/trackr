@@ -4,6 +4,7 @@ import type { Application } from "@/hooks/useApplications";
 import DrawerShell from "./DrawerShell";
 import DrawerSection from "./DrawerSection";
 import ActivitiesSection from "./ActivitiesSection";
+import TasksSection from "./TasksSection";
 
 export default function ApplicationDrawer({
   application,
@@ -29,16 +30,8 @@ export default function ApplicationDrawer({
           </div>
         </div>
 
-        {/* Placeholder sections */}
-        <DrawerSection title="Activities">
           <ActivitiesSection applicationId={application.id} />
-        </DrawerSection>
-
-        <DrawerSection title="Tasks">
-          <div className="text-sm opacity-60">
-            Tasks will live here.
-          </div>
-        </DrawerSection>
+          <TasksSection applicationId={application.id} />
 
         <DrawerSection title="Files">
           <div className="text-sm opacity-60">
