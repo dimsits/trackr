@@ -49,6 +49,22 @@ export class TasksController {
     });
   }
 
+    @Get('applications/:applicationId/tasks')
+    @ApiParam({ name: 'applicationId' })
+    @ApiOkResponse({ description: 'List tasks for an application (member required)' })
+    async listForApplication(
+      @Param('applicationId') applicationId: string,
+      @CurrentUser() user: CurrentUserPayload,
+    ) {
+      const workspaceId =
+        await this.tasks.getWorkspaceIdByApplicationId(applicationId);
+
+      await this.access.assertMember(user.userId, workspaceId);
+
+      return this.tasks.listForApplication(applicationId);
+  }
+
+
   @Post('applications/:applicationId/tasks')
   @ApiParam({ name: 'applicationId' })
   @ApiOkResponse({ description: 'Create task for an application (member required)' })
@@ -67,6 +83,8 @@ export class TasksController {
       dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
     });
   }
+
+
 
   @Patch('tasks/:taskId')
   @ApiParam({ name: 'taskId' })
