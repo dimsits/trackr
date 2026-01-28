@@ -4,6 +4,7 @@ import type { Application } from "@/hooks/useApplications";
 import DrawerShell from "./DrawerShell";
 import DrawerSection from "./DrawerSection";
 import ActivitiesSection from "./ActivitiesSection";
+import SectionBoundary from "./SectionBoundary";
 import TasksSection from "./TasksSection";
 import FileSection from "./FileSection";
 
@@ -30,10 +31,15 @@ export default function ApplicationDrawer({
             {application.role}
           </div>
         </div>
-
+        <SectionBoundary title="Activities">
           <ActivitiesSection applicationId={application.id} />
+        </SectionBoundary>
+        <SectionBoundary title="Tasks">
           <TasksSection applicationId={application.id} />
+        </SectionBoundary>
+        <SectionBoundary title="Files">
           <FileSection applicationId={application.id} />
+        </SectionBoundary>
 
       </div>
     </DrawerShell>

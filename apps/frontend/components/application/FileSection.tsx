@@ -4,6 +4,7 @@ import DrawerSection from "./DrawerSection";
 import { useFiles } from "@/hooks/useFiles";
 import { useUploadFile } from "@/hooks/useUploadFile";
 import { downloadFile } from "@/hooks/useDownloadFile";
+import { useState } from "react";
 
 export default function FilesSection({
   applicationId,
@@ -19,6 +20,9 @@ export default function FilesSection({
     uploadM.mutate(file);
     e.target.value = "";
   }
+
+  const [downloadErr, setDownloadErr] = useState<string | null>(null);
+
 
   return (
     <DrawerSection title="Files">
@@ -36,20 +40,25 @@ export default function FilesSection({
           )}
 
           {data?.map((f) => (
-            <div key={f.id} className="flex justify-between text-sm">
-              <button
-                className="underline"
-                onClick={() => downloadFile(f.id)}
-              >
+            <button
+            className="underline"
+            onClick={async () => {
+                try {
+                setDownloadErr(null);
+                await downloadFile(f.id);
+                } catch (e: any) {
+                setDownloadErr(e?.message ?? "Download failed");
+                }
+            }}
+            >
                 {f.name}
-              </button>
-              <span className="opacity-50">
-                {(f.size / 1024).toFixed(1)} KB
-              </span>
-            </div>
+            </button>
+
           ))}
         </div>
       )}
+
+      {downloadErr && <div className="text-sm text-red-600">{downloadErr}</div>}
 
       {/* upload */}
       <div className="mt-3">
