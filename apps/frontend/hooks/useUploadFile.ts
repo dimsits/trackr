@@ -20,6 +20,13 @@ export function useUploadFile(applicationId: string) {
         }),
       });
 
+      console.log("Uploading", {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+    })
+
+
       // 2) upload to storage
       const res = await fetch(upload.uploadUrl, {
         method: "PUT",
