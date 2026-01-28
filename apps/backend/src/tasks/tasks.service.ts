@@ -47,6 +47,18 @@ export class TasksService {
       },
     });
   }
+  
+  async listForApplication(applicationId: string) {
+    return this.prisma.task.findMany({
+      where: { applicationId },
+      orderBy: [
+        { status: 'asc' },
+        { dueAt: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+}
+
 
   async update(taskId: string, patch: { title?: string; dueAt?: Date | null; status?: TaskStatus }) {
     const existing = await this.prisma.task.findFirst({
