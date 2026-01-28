@@ -53,6 +53,8 @@ export default function WorkspaceBoardPage() {
         stages={(stagesQ.data ?? []).slice().sort((a,b)=>a.position-b.position)}
         applications={(appsQ.data ?? []).slice().sort((a,b)=>a.position-b.position)}
         loading={stagesQ.isLoading || appsQ.isLoading}
+        workspaceId={workspaceId}
+        pipelineId={chosenPipelineId}
       />
     </div>
   );
