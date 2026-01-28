@@ -1,11 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Stage } from "@/hooks/useStages";
 import type { Application } from "@/hooks/useApplications";
-import { useCreateApplication } from "@/hooks/useCreateApplication";
-import { useUpdateApplication } from "@/hooks/useUpdateApplication";
-import { useDeleteApplication } from "@/hooks/useDeleteApplication";
+import Column from "./Column";
+
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  rectIntersection,
+  closestCorners,
+  MeasuringStrategy,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
+
+import { useMoveApplication } from "@/hooks/useMoveApplication";
+import type { DragCardData } from "./types";
 
 type Props = {
   stages: Stage[];
@@ -13,6 +26,7 @@ type Props = {
   loading: boolean;
   workspaceId: string;
   pipelineId: string;
+  onCardClick: (app: Application) => void; // keep your Phase 2 edit panel
 };
 
 export default function Board({
@@ -21,203 +35,157 @@ export default function Board({
   loading,
   workspaceId,
   pipelineId,
+  onCardClick,
 }: Props) {
-  const firstStageId = stages[0]?.id ?? "";
+  const [appsState, setAppsState] = useState<Application[]>(applications);
+  const snapshotRef = useRef<Application[]>(applications);
 
-  // CREATE form (top of board)
-  const [newCompany, setNewCompany] = useState("");
-  const [newRole, setNewRole] = useState("");
-  const [newStageId, setNewStageId] = useState(firstStageId);
+  // Keep local state in sync when server truth changes
+  useEffect(() => {
+    setAppsState(applications);
+    snapshotRef.current = applications;
+  }, [applications]);
 
-  // EDIT drawer (super ugly)
-  const [editing, setEditing] = useState<Application | null>(null);
-  const [editCompany, setEditCompany] = useState("");
-  const [editRole, setEditRole] = useState("");
+  const moveM = useMoveApplication(workspaceId, pipelineId);
 
-  const createM = useCreateApplication(workspaceId, pipelineId);
-  const updateM = useUpdateApplication(workspaceId, pipelineId);
-  const deleteM = useDeleteApplication(workspaceId, pipelineId);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const stageMap = useMemo(() => {
+  const byStage = useMemo(() => {
     const map = new Map<string, Application[]>();
     for (const s of stages) map.set(s.id, []);
-    for (const a of applications) {
-      const bucket = map.get(a.stageId);
-      if (bucket) bucket.push(a);
-    }
+    for (const a of appsState) map.get(a.stageId)?.push(a);
     for (const [k, v] of map) v.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     return map;
-  }, [stages, applications]);
+  }, [stages, appsState]);
+
+  function findStageIdOfApp(appId: string): string | null {
+    for (const s of stages) {
+      const apps = byStage.get(s.id) ?? [];
+      if (apps.some((a) => a.id === appId)) return s.id;
+    }
+    return null;
+  }
+
+  function getAppIndexInStage(stageId: string, appId: string): number {
+    const list = byStage.get(stageId) ?? [];
+    return list.findIndex((a) => a.id === appId);
+  }
+
+  
+
+
+  async function onDragEnd(e: DragEndEvent) {
+  const { active, over } = e;
+  console.log("dragEnd", { active: active.id, over: over?.id });
+  if (!over) return;
+
+  const appId = String(active.id);
+  const overId = String(over.id);
+
+  const fromStageId = findStageIdOfApp(appId);
+  if (!fromStageId) return;
+
+  const toStageId = getStageIdFromOver(overId) ?? fromStageId;
+
+  // snapshot for rollback
+  snapshotRef.current = appsState;
+
+  // OPTIMISTIC UPDATE
+  let nextStageId = toStageId;
+  let nextPosition = 0;
+
+  setAppsState((prev) => {
+    const next = prev.map((a) => ({ ...a })); // clone
+
+    const moving = next.find((a) => a.id === appId);
+    if (!moving) return prev;
+
+    const stageLists = buildStageLists(next);
+
+    const fromList = stageLists.get(fromStageId) ?? [];
+    const toList = stageLists.get(toStageId) ?? [];
+
+    // remove moving from its current list
+    const fromIndex = fromList.findIndex((a) => a.id === appId);
+    if (fromIndex >= 0) fromList.splice(fromIndex, 1);
+
+    // update stage
+    moving.stageId = toStageId;
+
+    // compute insert index
+    let insertIndex = toList.length;
+
+    // if dropping over a CARD, insert at that card's index
+    if (!overId.startsWith("column:")) {
+      const overIndex = toList.findIndex((a) => a.id === overId);
+      if (overIndex >= 0) insertIndex = overIndex;
+    }
+    // if dropping over a COLUMN, append to end (insertIndex already = length)
+
+    toList.splice(insertIndex, 0, moving);
+
+    // reassign sequential positions for both affected stages
+    const rePos = (list: Application[]) => list.map((a, i) => ({ ...a, position: i }));
+
+    const updatedFrom = rePos(fromList);
+    const updatedTo = fromStageId === toStageId ? updatedFrom : rePos(toList);
+
+    // capture final position of moving
+    const movedList = fromStageId === toStageId ? updatedFrom : updatedTo;
+    const idx = movedList.findIndex((a) => a.id === appId);
+    nextPosition = idx >= 0 ? idx : 0;
+    nextStageId = toStageId;
+
+    // write back into next array
+    const patchMap = new Map<string, Application>();
+    for (const a of updatedFrom) patchMap.set(a.id, a);
+    for (const a of updatedTo) patchMap.set(a.id, a);
+
+    return next.map((a) => patchMap.get(a.id) ?? a);
+  });
+
+  // PERSIST (server truth)
+  try {
+    await moveM.mutateAsync({ id: appId, stageId: nextStageId, position: nextPosition });
+  } catch {
+    setAppsState(snapshotRef.current);
+  }
+}
+
+
+    function getStageIdFromOver(overId: string): string | null {
+      if (stages.some((s) => s.id === overId)) return overId;;
+      return findStageIdOfApp(overId); // if over a card id
+    }
+
+  function buildStageLists(list: Application[]) {
+    const map = new Map<string, Application[]>();
+    for (const s of stages) map.set(s.id, []);
+    for (const a of list) map.get(a.stageId)?.push(a);
+    for (const [, v] of map) v.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    return map;
+  }
 
   if (loading) return <div className="p-2">Loading board...</div>;
 
-  function openEdit(a: Application) {
-    setEditing(a);
-    setEditCompany(a.company ?? "");
-    setEditRole(a.role ?? "");
-  }
-
-  async function submitCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newCompany.trim() || !newRole.trim() || !newStageId) return;
-
-    await createM.mutateAsync({
-      stageId: newStageId,
-      company: newCompany.trim(),
-      role: newRole.trim(),
-    });
-
-    setNewCompany("");
-    setNewRole("");
-  }
-
-  async function submitEdit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editing) return;
-
-    await updateM.mutateAsync({
-      id: editing.id,
-      data: {
-        company: editCompany.trim(),
-        role: editRole.trim(),
-      },
-    });
-
-    setEditing(null);
-  }
-
-  async function doDelete() {
-    if (!editing) return;
-    const ok = confirm("Delete this application?");
-    if (!ok) return;
-
-    await deleteM.mutateAsync(editing.id);
-    setEditing(null);
-  }
 
   return (
-    <div className="space-y-4">
-      {/* CREATE (minimal) */}
-      <form onSubmit={submitCreate} className="border p-3 space-y-2">
-        <div className="font-medium">Add application (Phase 2 test)</div>
-
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="border p-2"
-            placeholder="Company"
-            value={newCompany}
-            onChange={(e) => setNewCompany(e.target.value)}
-          />
-          <input
-            className="border p-2"
-            placeholder="Role"
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value)}
-          />
-
-          <select
-            className="border p-2"
-            value={newStageId}
-            onChange={(e) => setNewStageId(e.target.value)}
-          >
-            {stages.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
-          <button className="border p-2" type="submit" disabled={createM.isPending}>
-            {createM.isPending ? "Creating..." : "Create"}
-          </button>
-        </div>
-
-        {(createM.error as any)?.message && (
-          <div className="text-sm text-red-600">
-            {(createM.error as any).message}
-          </div>
-        )}
-      </form>
-
-      {/* BOARD (read-only columns, clickable cards) */}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      onDragEnd={onDragEnd}
+    >
       <div className="flex gap-3 overflow-x-auto">
-        {stages.map((s) => {
-          const cards = stageMap.get(s.id) ?? [];
-          return (
-            <div key={s.id} className="min-w-[280px] border p-3">
-              <div className="font-medium mb-2">{s.name}</div>
-
-              <div className="space-y-2">
-                {cards.map((a) => (
-                  <button
-                    key={a.id}
-                    className="w-full text-left border p-2"
-                    onClick={() => openEdit(a)}
-                    type="button"
-                  >
-                    <div className="font-medium">{a.company}</div>
-                    <div className="text-sm opacity-70">{a.role}</div>
-                  </button>
-                ))}
-
-                {cards.length === 0 && <div className="text-sm opacity-50">Empty</div>}
-              </div>
-            </div>
-          );
-        })}
+        {stages.map((s) => (
+          <Column
+            key={s.id}
+            stage={s}
+            apps={(byStage.get(s.id) ?? [])}
+            onCardClick={onCardClick}
+          />
+        ))}
       </div>
-
-      {/* EDIT (super minimal “drawer”) */}
-      {editing && (
-        <div className="border p-3 space-y-2">
-          <div className="font-medium">Edit application (Phase 2 test)</div>
-
-          <form onSubmit={submitEdit} className="space-y-2">
-            <input
-              className="border p-2 w-full"
-              value={editCompany}
-              onChange={(e) => setEditCompany(e.target.value)}
-              placeholder="Company"
-            />
-            <input
-              className="border p-2 w-full"
-              value={editRole}
-              onChange={(e) => setEditRole(e.target.value)}
-              placeholder="Role"
-            />
-
-            <div className="flex gap-2">
-              <button className="border p-2" type="submit" disabled={updateM.isPending}>
-                {updateM.isPending ? "Saving..." : "Save"}
-              </button>
-
-              <button className="border p-2" type="button" onClick={() => setEditing(null)}>
-                Close
-              </button>
-
-              <button
-                className="border p-2"
-                type="button"
-                onClick={doDelete}
-                disabled={deleteM.isPending}
-              >
-                {deleteM.isPending ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-
-            {(updateM.error as any)?.message && (
-              <div className="text-sm text-red-600">
-                {(updateM.error as any).message}
-              </div>
-            )}
-            {(deleteM.error as any)?.message && (
-              <div className="text-sm text-red-600">
-                {(deleteM.error as any).message}
-              </div>
-            )}
-          </form>
-        </div>
-      )}
-    </div>
+    </DndContext>
   );
 }
