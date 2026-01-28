@@ -8,11 +8,12 @@ export type Task = {
   dueAt?: string | null;
 };
 
-export function useTasks(workspaceId: string | null) {
+export function useTasks(applicationId: string | null) {
   return useQuery({
-    queryKey: ["tasks", workspaceId],
-    queryFn: () => api<Task[]>(`/workspaces/${workspaceId}/tasks`),
-    enabled: !!workspaceId,
+    queryKey: ["tasks", applicationId],
+    queryFn: () =>
+      api<Task[]>(`/applications/${applicationId}/tasks`),
+    enabled: !!applicationId,
     staleTime: 60_000,
   });
 }
