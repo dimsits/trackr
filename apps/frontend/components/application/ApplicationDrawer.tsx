@@ -5,6 +5,7 @@ import DrawerShell from "./DrawerShell";
 import DrawerSection from "./DrawerSection";
 import ActivitiesSection from "./ActivitiesSection";
 import TasksSection from "./TasksSection";
+import FileSection from "./FileSection";
 
 export default function ApplicationDrawer({
   application,
@@ -32,12 +33,8 @@ export default function ApplicationDrawer({
 
           <ActivitiesSection applicationId={application.id} />
           <TasksSection applicationId={application.id} />
+          <FileSection applicationId={application.id} />
 
-        <DrawerSection title="Files">
-          <div className="text-sm opacity-60">
-            Files will live here.
-          </div>
-        </DrawerSection>
       </div>
     </DrawerShell>
   );
