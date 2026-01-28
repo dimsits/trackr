@@ -1,61 +1,260 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+
+import Board from "@/components/board/Board";
+
 import { usePipelines } from "@/hooks/usePipelines";
 import { useStages } from "@/hooks/useStages";
 import { useApplications } from "@/hooks/useApplications";
-import Board from "@/components/board/Board";
-import { useEffect, useMemo } from "react";
+import type { Application } from "@/hooks/useApplications";
+
+import { useCreateApplication } from "@/hooks/useCreateApplication";
+import { useUpdateApplication } from "@/hooks/useUpdateApplication";
+import { useDeleteApplication } from "@/hooks/useDeleteApplication";
 
 export default function WorkspaceBoardPage() {
+  // --- router hooks ---
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const sp = useSearchParams();
   const router = useRouter();
 
   const pipelineIdFromUrl = sp.get("pipelineId") ?? "";
 
+  // --- data hooks (MUST be called every render) ---
   const pipelinesQ = usePipelines(workspaceId);
+
   const chosenPipelineId = useMemo(() => {
     if (pipelineIdFromUrl) return pipelineIdFromUrl;
     const ps = pipelinesQ.data ?? [];
     return (ps.find((p) => p.isDefault) ?? ps[0])?.id ?? "";
   }, [pipelineIdFromUrl, pipelinesQ.data]);
 
-  // keep URL in sync so refresh is stable
+  const stagesQ = useStages(chosenPipelineId);
+  const appsQ = useApplications(workspaceId, chosenPipelineId);
+
+  const sortedStages = useMemo(
+    () => (stagesQ.data ?? []).slice().sort((a, b) => a.position - b.position),
+    [stagesQ.data]
+  );
+
+  const sortedApps = useMemo(
+    () => (appsQ.data ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+    [appsQ.data]
+  );
+
+  // --- write hooks (also must be unconditional) ---
+  const createM = useCreateApplication(workspaceId, chosenPipelineId);
+  const updateM = useUpdateApplication(workspaceId, chosenPipelineId);
+  const deleteM = useDeleteApplication(workspaceId, chosenPipelineId);
+
+  // --- local state hooks (unconditional) ---
+  const [newCompany, setNewCompany] = useState("");
+  const [newRole, setNewRole] = useState("");
+  const [newStageId, setNewStageId] = useState("");
+
+  const [editing, setEditing] = useState<Application | null>(null);
+  const [editCompany, setEditCompany] = useState("");
+  const [editRole, setEditRole] = useState("");
+
+  // --- effects (unconditional) ---
   useEffect(() => {
     if (!pipelineIdFromUrl && chosenPipelineId) {
       router.replace(`/workspaces/${workspaceId}?pipelineId=${chosenPipelineId}`);
     }
   }, [pipelineIdFromUrl, chosenPipelineId, router, workspaceId]);
 
-  const stagesQ = useStages(chosenPipelineId);
-  const appsQ = useApplications(workspaceId, chosenPipelineId);
+  useEffect(() => {
+    if (!newStageId && sortedStages.length > 0) setNewStageId(sortedStages[0].id);
+  }, [newStageId, sortedStages]);
 
+  // -------------------------
+  // GUARDS (AFTER ALL HOOKS)
+  // -------------------------
   if (pipelinesQ.isLoading) return <div className="p-6">Loading pipelines...</div>;
-  if (!chosenPipelineId) return <div className="p-6">No pipelines found.</div>;
+
+  if (pipelinesQ.isError) {
+    return (
+      <div className="p-6">
+        <div className="font-medium text-red-600">Failed to load pipelines</div>
+        <pre className="mt-2 text-xs whitespace-pre-wrap">
+          {JSON.stringify(pipelinesQ.error, null, 2)}
+        </pre>
+      </div>
+    );
+  }
+
+  const pipelines = pipelinesQ.data ?? [];
+  if (pipelines.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="font-medium">No pipelines found</div>
+        <div className="text-xs opacity-70 mt-2">workspaceId: {workspaceId}</div>
+      </div>
+    );
+  }
+
+  async function submitCreate(e: React.FormEvent) {
+  e.preventDefault();
+  if (!newCompany.trim() || !newRole.trim() || !newStageId) return;
+
+  await createM.mutateAsync({
+    stageId: newStageId,
+    company: newCompany.trim(),
+    role: newRole.trim(),
+  });
+
+  setNewCompany("");
+  setNewRole("");
+}
+
+
+  function openEdit(app: Application) {
+  setEditing(app);
+  setEditCompany(app.company ?? "");
+  setEditRole(app.role ?? "");
+}
+
+  function closeEdit() {
+    setEditing(null);
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+
+    await updateM.mutateAsync({
+      id: editing.id,
+      data: {
+        company: editCompany.trim(),
+        role: editRole.trim(),
+      },
+    });
+
+    closeEdit();
+  }
+
+  async function deleteEditing() {
+    if (!editing) return;
+    if (!confirm("Delete this application?")) return;
+
+    await deleteM.mutateAsync(editing.id);
+    closeEdit();
+  }
+
 
   return (
     <div className="p-6 space-y-4">
       <div className="flex gap-2 items-center">
         <h1 className="text-xl font-semibold">Board</h1>
+
         <select
           className="border p-2"
           value={chosenPipelineId}
-          onChange={(e) => router.push(`/workspaces/${workspaceId}?pipelineId=${e.target.value}`)}
+          onChange={(e) =>
+            router.push(`/workspaces/${workspaceId}?pipelineId=${e.target.value}`)
+          }
         >
           {(pipelinesQ.data ?? []).map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
           ))}
         </select>
       </div>
 
+      <form className="border p-3 space-y-2" onSubmit={submitCreate}>
+        <div className="font-medium">Add application</div>
+
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="border p-2"
+            placeholder="Company"
+            value={newCompany}
+            onChange={(e) => setNewCompany(e.target.value)}
+          />
+
+          <input
+            className="border p-2"
+            placeholder="Role"
+            value={newRole}
+            onChange={(e) => setNewRole(e.target.value)}
+          />
+
+          <select
+            className="border p-2"
+            value={newStageId}
+            onChange={(e) => setNewStageId(e.target.value)}
+          >
+            {sortedStages.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
+          <button className="border p-2" type="submit" disabled={createM.isPending}>
+            {createM.isPending ? "Creating..." : "Create"}
+          </button>
+        </div>
+
+        {(createM.error as any)?.message && (
+          <div className="text-sm text-red-600">
+            {(createM.error as any).message}
+          </div>
+        )}
+      </form>
+
+
       <Board
-        stages={(stagesQ.data ?? []).slice().sort((a,b)=>a.position-b.position)}
-        applications={(appsQ.data ?? []).slice().sort((a,b)=>a.position-b.position)}
+        stages={sortedStages}
+        applications={sortedApps}
         loading={stagesQ.isLoading || appsQ.isLoading}
         workspaceId={workspaceId}
         pipelineId={chosenPipelineId}
+        onCardClick={openEdit}
       />
+
+      {/* Minimal edit panel (ugly by design) */}
+      {editing && (
+        <div className="border p-3 space-y-2">
+          <div className="font-medium">Edit application</div>
+
+          <input
+            className="border p-2 w-full"
+            value={editCompany}
+            onChange={(e) => setEditCompany(e.target.value)}
+            placeholder="Company"
+          />
+          <input
+            className="border p-2 w-full"
+            value={editRole}
+            onChange={(e) => setEditRole(e.target.value)}
+            placeholder="Role"
+          />
+
+          <div className="flex gap-2">
+            <button className="border p-2" onClick={saveEdit} disabled={updateM.isPending}>
+              {updateM.isPending ? "Saving..." : "Save"}
+            </button>
+
+            <button className="border p-2" onClick={closeEdit} type="button">
+              Close
+            </button>
+
+            <button className="border p-2" onClick={deleteEditing} disabled={deleteM.isPending}>
+              {deleteM.isPending ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+
+          {(updateM.error as any)?.message && (
+            <div className="text-sm text-red-600">{(updateM.error as any).message}</div>
+          )}
+          {(deleteM.error as any)?.message && (
+            <div className="text-sm text-red-600">{(deleteM.error as any).message}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
