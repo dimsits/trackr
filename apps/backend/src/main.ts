@@ -34,6 +34,12 @@ async function bootstrap() {
     }
   });
 
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   const prismaService = app.get(PrismaService);
 
   await app.listen(3001);
