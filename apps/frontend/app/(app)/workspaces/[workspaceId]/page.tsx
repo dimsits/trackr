@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import Board from "@/components/board/Board";
+import ApplicationDrawer from "@/components/application/ApplicationDrawer"; 
 
 import { usePipelines } from "@/hooks/usePipelines";
 import { useStages } from "@/hooks/useStages";
@@ -57,6 +58,9 @@ export default function WorkspaceBoardPage() {
   const [editing, setEditing] = useState<Application | null>(null);
   const [editCompany, setEditCompany] = useState("");
   const [editRole, setEditRole] = useState("");
+
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);  
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // --- effects (unconditional) ---
   useEffect(() => {
@@ -142,6 +146,15 @@ export default function WorkspaceBoardPage() {
     closeEdit();
   }
 
+  function openDrawer(app: Application) {
+    setSelectedApp(app);
+    setDrawerOpen(true);
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+  }
+
 
   return (
     <div className="p-6 space-y-4">
@@ -212,7 +225,7 @@ export default function WorkspaceBoardPage() {
         loading={stagesQ.isLoading || appsQ.isLoading}
         workspaceId={workspaceId}
         pipelineId={chosenPipelineId}
-        onCardClick={openEdit}
+        onCardClick={openDrawer}
       />
 
       {/* Minimal edit panel (ugly by design) */}
@@ -255,6 +268,12 @@ export default function WorkspaceBoardPage() {
           )}
         </div>
       )}
+
+      <ApplicationDrawer
+        application={selectedApp}
+        open={drawerOpen}
+        onClose={closeDrawer}
+      />
     </div>
   );
 }
