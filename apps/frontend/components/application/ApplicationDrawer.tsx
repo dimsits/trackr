@@ -32,6 +32,9 @@ export default function ApplicationDrawer({
 
   if (!application) return null;
 
+  const [isEditing, setIsEditing] = useState(false);
+
+
   return (
     <DrawerShell open={open} onClose={onClose}>
       <div className="space-y-3">
