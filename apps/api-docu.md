@@ -136,6 +136,7 @@ Create a new user account.
   "password": "password123",
   "name": "John Doe"
 }
+```
 
 ---
 
