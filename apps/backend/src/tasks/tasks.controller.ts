@@ -11,7 +11,7 @@ import {
 import { ApiHeader, ApiOkResponse, ApiParam, ApiQuery, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TaskStatus } from '@prisma/client';
 
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 

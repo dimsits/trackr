@@ -1,12 +1,11 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOkResponse, ApiParam, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { DevAuthGuard } from '../auth/dev-auth/dev-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 import { WorkspaceAccessService } from '../workspace-access/workspace-access.service';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Activities')
 @ApiBearerAuth('access-token')

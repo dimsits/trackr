@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiHeader, ApiNoContentResponse, ApiOkResponse, ApiParam, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user/current-user.decorator';
 import type { CurrentUserPayload } from '../auth/current-user/current-user.decorator';
 import { FilesService } from './files.service';
