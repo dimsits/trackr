@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import Board from "@/components/board/Board";
-import ApplicationDrawer from "@/components/application/ApplicationDrawer"; 
+import ApplicationDrawer from "@/components/application/ApplicationDrawer";
+import Modal from "@/components/ui/Modal";
+import CreatePipelineForm from "@/components/forms/CreatePipelineForm";
 
 import { usePipelines } from "@/hooks/usePipelines";
 import { useStages } from "@/hooks/useStages";
@@ -41,7 +43,10 @@ export default function WorkspaceBoardPage() {
   );
 
   const sortedApps = useMemo(
-    () => (appsQ.data ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+    () =>
+      (appsQ.data ?? [])
+        .slice()
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
     [appsQ.data]
   );
 
@@ -59,8 +64,11 @@ export default function WorkspaceBoardPage() {
   const [editCompany, setEditCompany] = useState("");
   const [editRole, setEditRole] = useState("");
 
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);  
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // NEW: pipeline modal
+  const [createPipelineOpen, setCreatePipelineOpen] = useState(false);
 
   // --- effects (unconditional) ---
   useEffect(() => {
@@ -76,7 +84,9 @@ export default function WorkspaceBoardPage() {
   // -------------------------
   // GUARDS (AFTER ALL HOOKS)
   // -------------------------
-  if (pipelinesQ.isLoading) return <div className="min-h-screen bg-white p-6p-">Loading pipelines...</div>;
+  if (pipelinesQ.isLoading) {
+    return <div className="min-h-screen bg-white p-6">Loading pipelines...</div>;
+  }
 
   if (pipelinesQ.isError) {
     return (
@@ -90,35 +100,26 @@ export default function WorkspaceBoardPage() {
   }
 
   const pipelines = pipelinesQ.data ?? [];
-  if (pipelines.length === 0) {
-    return (
-      <div className="min-h-screen bg-white p-6p-">
-        <div className="font-medium">No pipelines found</div>
-        <div className="text-xs opacity-70 mt-2">workspaceId: {workspaceId}</div>
-      </div>
-    );
-  }
 
   async function submitCreate(e: React.FormEvent) {
-  e.preventDefault();
-  if (!newCompany.trim() || !newRole.trim() || !newStageId) return;
+    e.preventDefault();
+    if (!newCompany.trim() || !newRole.trim() || !newStageId) return;
 
-  await createM.mutateAsync({
-    stageId: newStageId,
-    company: newCompany.trim(),
-    role: newRole.trim(),
-  });
+    await createM.mutateAsync({
+      stageId: newStageId,
+      company: newCompany.trim(),
+      role: newRole.trim(),
+    });
 
-  setNewCompany("");
-  setNewRole("");
-}
-
+    setNewCompany("");
+    setNewRole("");
+  }
 
   function openEdit(app: Application) {
-  setEditing(app);
-  setEditCompany(app.company ?? "");
-  setEditRole(app.role ?? "");
-}
+    setEditing(app);
+    setEditCompany(app.company ?? "");
+    setEditRole(app.role ?? "");
+  }
 
   function closeEdit() {
     setEditing(null);
@@ -155,9 +156,9 @@ export default function WorkspaceBoardPage() {
     setDrawerOpen(false);
   }
 
-
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-white p-6 space-y-5">
+      {/* Header */}
       <div className="flex gap-2 items-center">
         <h1 className="text-xl font-semibold">Board</h1>
 
@@ -167,113 +168,176 @@ export default function WorkspaceBoardPage() {
           onChange={(e) =>
             router.push(`/workspaces/${workspaceId}?pipelineId=${e.target.value}`)
           }
+          disabled={pipelines.length === 0}
         >
-          {(pipelinesQ.data ?? []).map((p) => (
+          {pipelines.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </select>
+
+        <button
+          className="border p-2"
+          type="button"
+          onClick={() => setCreatePipelineOpen(true)}
+        >
+          + Pipeline
+        </button>
       </div>
 
-      <form className="border p-3 space-y-2 mb-5 mt-5" onSubmit={submitCreate}>
-        <div className="font-medium">Add application</div>
-
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="border p-2"
-            placeholder="Company"
-            value={newCompany}
-            onChange={(e) => setNewCompany(e.target.value)}
-          />
-
-          <input
-            className="border p-2"
-            placeholder="Role"
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value)}
-          />
-
-          <select
-            className="border p-2"
-            value={newStageId}
-            onChange={(e) => setNewStageId(e.target.value)}
+      {/* If no pipelines, just prompt user to create one */}
+      {pipelines.length === 0 ? (
+        <div className="border p-4">
+          <div className="font-medium">No pipelines found</div>
+          <div className="text-sm opacity-70 mt-1">
+            Create a pipeline to start tracking applications.
+          </div>
+          <button
+            className="mt-3 border p-2"
+            type="button"
+            onClick={() => setCreatePipelineOpen(true)}
           >
-            {sortedStages.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
-          <button className="border p-2" type="submit" disabled={createM.isPending}>
-            {createM.isPending ? "Creating..." : "Create"}
+            Create pipeline
           </button>
         </div>
+      ) : (
+        <>
+          {/* Create application (minimal) */}
+          <form className="border p-3 space-y-2" onSubmit={submitCreate}>
+            <div className="font-medium">Add application</div>
 
-        {(createM.error as any)?.message && (
-          <div className="text-sm text-red-600">
-            {(createM.error as any).message}
-          </div>
-        )}
-      </form>
+            <div className="flex flex-wrap gap-2">
+              <input
+                className="border p-2"
+                placeholder="Company"
+                value={newCompany}
+                onChange={(e) => setNewCompany(e.target.value)}
+              />
 
+              <input
+                className="border p-2"
+                placeholder="Role"
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+              />
 
-      <Board
-        stages={sortedStages}
-        applications={sortedApps}
-        loading={stagesQ.isLoading || appsQ.isLoading}
-        workspaceId={workspaceId}
-        pipelineId={chosenPipelineId}
-        onCardClick={openDrawer}
-      />
+              <select
+                className="border p-2"
+                value={newStageId}
+                onChange={(e) => setNewStageId(e.target.value)}
+              >
+                {sortedStages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
 
-      {/* Minimal edit panel (ugly by design) */}
-      {editing && (
-        <div className="border p-3 space-y-2">
-          <div className="font-medium">Edit application</div>
+              <button className="border p-2" type="submit" disabled={createM.isPending}>
+                {createM.isPending ? "Creating..." : "Create"}
+              </button>
+            </div>
 
-          <input
-            className="border p-2 w-full"
-            value={editCompany}
-            onChange={(e) => setEditCompany(e.target.value)}
-            placeholder="Company"
+            {(createM.error as any)?.message && (
+              <div className="text-sm text-red-600">
+                {(createM.error as any).message}
+              </div>
+            )}
+          </form>
+
+          <Board
+            stages={sortedStages}
+            applications={sortedApps}
+            loading={stagesQ.isLoading || appsQ.isLoading}
+            workspaceId={workspaceId}
+            pipelineId={chosenPipelineId}
+            onCardClick={openDrawer}
           />
-          <input
-            className="border p-2 w-full"
-            value={editRole}
-            onChange={(e) => setEditRole(e.target.value)}
-            placeholder="Role"
-          />
 
-          <div className="flex gap-2">
-            <button className="border p-2" onClick={saveEdit} disabled={updateM.isPending}>
-              {updateM.isPending ? "Saving..." : "Save"}
-            </button>
+          {/* Minimal edit panel (ugly by design) */}
+          {editing && (
+            <div className="border p-3 space-y-2">
+              <div className="font-medium">Edit application</div>
 
-            <button className="border p-2" onClick={closeEdit} type="button">
-              Close
-            </button>
+              <input
+                className="border p-2 w-full"
+                value={editCompany}
+                onChange={(e) => setEditCompany(e.target.value)}
+                placeholder="Company"
+              />
+              <input
+                className="border p-2 w-full"
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value)}
+                placeholder="Role"
+              />
 
-            <button className="border p-2" onClick={deleteEditing} disabled={deleteM.isPending}>
-              {deleteM.isPending ? "Deleting..." : "Delete"}
-            </button>
-          </div>
+              <div className="flex gap-2">
+                <button
+                  className="border p-2"
+                  onClick={saveEdit}
+                  disabled={updateM.isPending}
+                  type="button"
+                >
+                  {updateM.isPending ? "Saving..." : "Save"}
+                </button>
 
-          {(updateM.error as any)?.message && (
-            <div className="text-sm text-red-600">{(updateM.error as any).message}</div>
+                <button className="border p-2" onClick={closeEdit} type="button">
+                  Close
+                </button>
+
+                <button
+                  className="border p-2"
+                  onClick={deleteEditing}
+                  disabled={deleteM.isPending}
+                  type="button"
+                >
+                  {deleteM.isPending ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+
+              {(updateM.error as any)?.message && (
+                <div className="text-sm text-red-600">
+                  {(updateM.error as any).message}
+                </div>
+              )}
+              {(deleteM.error as any)?.message && (
+                <div className="text-sm text-red-600">
+                  {(deleteM.error as any).message}
+                </div>
+              )}
+            </div>
           )}
-          {(deleteM.error as any)?.message && (
-            <div className="text-sm text-red-600">{(deleteM.error as any).message}</div>
-          )}
-        </div>
+        </>
       )}
 
-      <ApplicationDrawer
-        application={selectedApp}
-        open={drawerOpen}
-        onClose={closeDrawer}
-      />
+      <ApplicationDrawer application={selectedApp} open={drawerOpen} onClose={closeDrawer} />
+
+      {/* Create pipeline modal */}
+      <Modal
+        open={createPipelineOpen}
+        onClose={() => setCreatePipelineOpen(false)}
+        ariaLabel="Create pipeline"
+      >
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <div className="text-lg font-semibold">Create pipeline</div>
+            <div className="text-sm opacity-70">
+              Pipelines contain stages and applications.
+            </div>
+          </div>
+
+          <CreatePipelineForm
+            workspaceId={workspaceId}
+            onCancel={() => setCreatePipelineOpen(false)}
+            onCreated={(pipelineId) => {
+              setCreatePipelineOpen(false);
+              router.push(`/workspaces/${workspaceId}?pipelineId=${pipelineId}`);
+            }}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

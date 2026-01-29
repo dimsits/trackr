@@ -1,11 +1,12 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Workspace = { id: string; name: string; role: string };
+import type { WorkspaceListItem } from "./useCreateWorkspace";
 
 export function useWorkspaces() {
   return useQuery({
     queryKey: ["workspaces"],
-    queryFn: () => api<Workspace[]>("/workspaces"),
+    queryFn: () => api<WorkspaceListItem[]>("/workspaces"),
   });
 }
