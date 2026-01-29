@@ -13,7 +13,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
     }),
-  )
+  );
 
   app.setGlobalPrefix('api');
 
@@ -22,26 +22,31 @@ async function bootstrap() {
     .setDescription('The Trackr API documentation')
     .setVersion('1.0')
     .addBearerAuth(
-      {type: 'http', scheme: 'bearer', bearerFormat: 'JWT'},
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'access-token',
     )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    }
+    swaggerOptions: { persistAuthorization: true },
   });
 
+  // CORS: allow localhost in dev, and your deployed frontend in prod
+  const corsOrigin =
+    process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean) ??
+    ['http://localhost:3000'];
+
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: corsOrigin,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const prismaService = app.get(PrismaService);
 
-  await app.listen(3001);
+  // Render requires binding to PORT and 0.0.0.0
+  const port = process.env.PORT ? Number(process.env.PORT) : 3001;
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();
