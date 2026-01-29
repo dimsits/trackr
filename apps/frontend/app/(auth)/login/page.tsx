@@ -10,8 +10,8 @@ export default function LoginPage() {
   const sp = useSearchParams();
   const next = sp.get("next") ?? "/workspaces";
 
-  const [email, setEmail] = useState("seed@trackr.dev");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
