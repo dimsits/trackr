@@ -8,17 +8,17 @@ import Column from "./Column";
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
-  rectIntersection,
   closestCorners,
-  MeasuringStrategy,
+  defaultDropAnimationSideEffects,
 } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
 
 import { useMoveApplication } from "@/hooks/useMoveApplication";
-import type { DragCardData } from "./types";
 
 type Props = {
   stages: Stage[];
@@ -26,8 +26,12 @@ type Props = {
   loading: boolean;
   workspaceId: string;
   pipelineId: string;
-  onCardClick: (app: Application) => void; // keep your Phase 2 edit panel
+  onCardClick: (app: Application) => void;
 };
+
+function sig(apps: Application[]) {
+  return apps.map((a) => `${a.id}:${a.stageId}:${a.position ?? 0}`).join("|");
+}
 
 export default function Board({
   stages,
@@ -40,123 +44,68 @@ export default function Board({
   const [appsState, setAppsState] = useState<Application[]>(applications);
   const snapshotRef = useRef<Application[]>(applications);
 
-  // Keep local state in sync when server truth changes
-  useEffect(() => {
-    setAppsState(applications);
-    snapshotRef.current = applications;
-  }, [applications]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const lastOverIdRef = useRef<string | null>(null);
+
+  // RAF throttling to avoid dnd-kit useRect measurement update loops
+  const rafRef = useRef<number | null>(null);
+  const pendingOverRef = useRef<{ appId: string; overId: string } | null>(null);
 
   const moveM = useMoveApplication(workspaceId, pipelineId);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  const applicationsSig = useMemo(() => sig(applications), [applications]);
+  const appsStateSig = useMemo(() => sig(appsState), [appsState]);
+
+  // Sync local state from server truth (guarded)
+  useEffect(() => {
+    if (activeId) return; // do not stomp optimistic state while dragging
+    if (applicationsSig === appsStateSig) return;
+
+    setAppsState(applications);
+    snapshotRef.current = applications;
+  }, [applicationsSig, appsStateSig, activeId, applications]);
 
   const byStage = useMemo(() => {
     const map = new Map<string, Application[]>();
     for (const s of stages) map.set(s.id, []);
     for (const a of appsState) map.get(a.stageId)?.push(a);
-    for (const [k, v] of map) v.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    for (const [, v] of map) v.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     return map;
   }, [stages, appsState]);
 
-  function findStageIdOfApp(appId: string): string | null {
+  const activeApp = useMemo(() => {
+    if (!activeId) return null;
+    return appsState.find((a) => a.id === activeId) ?? null;
+  }, [activeId, appsState]);
+
+  const dropAnimation = useMemo(
+    () => ({
+      duration: 220,
+      easing: "cubic-bezier(0.2,0,0,1)",
+      sideEffects: defaultDropAnimationSideEffects({
+        styles: { active: { opacity: "0.5" } },
+      }),
+    }),
+    []
+  );
+
+  function findStageIdOfApp(appId: string, stageMap?: Map<string, Application[]>): string | null {
+    const map = stageMap ?? byStage;
     for (const s of stages) {
-      const apps = byStage.get(s.id) ?? [];
+      const apps = map.get(s.id) ?? [];
       if (apps.some((a) => a.id === appId)) return s.id;
     }
     return null;
   }
 
-  function getAppIndexInStage(stageId: string, appId: string): number {
-    const list = byStage.get(stageId) ?? [];
-    return list.findIndex((a) => a.id === appId);
+  function getStageIdFromOver(overId: string, stageMap?: Map<string, Application[]>): string | null {
+    if (stages.some((s) => s.id === overId)) return overId;
+    return findStageIdOfApp(overId, stageMap);
   }
-
-  
-
-
-  async function onDragEnd(e: DragEndEvent) {
-  const { active, over } = e;
-  console.log("dragEnd", { active: active.id, over: over?.id });
-  if (!over) return;
-
-  const appId = String(active.id);
-  const overId = String(over.id);
-
-  const fromStageId = findStageIdOfApp(appId);
-  if (!fromStageId) return;
-
-  const toStageId = getStageIdFromOver(overId) ?? fromStageId;
-
-  // snapshot for rollback
-  snapshotRef.current = appsState;
-
-  // OPTIMISTIC UPDATE
-  let nextStageId = toStageId;
-  let nextPosition = 0;
-
-  setAppsState((prev) => {
-    const next = prev.map((a) => ({ ...a })); // clone
-
-    const moving = next.find((a) => a.id === appId);
-    if (!moving) return prev;
-
-    const stageLists = buildStageLists(next);
-
-    const fromList = stageLists.get(fromStageId) ?? [];
-    const toList = stageLists.get(toStageId) ?? [];
-
-    // remove moving from its current list
-    const fromIndex = fromList.findIndex((a) => a.id === appId);
-    if (fromIndex >= 0) fromList.splice(fromIndex, 1);
-
-    // update stage
-    moving.stageId = toStageId;
-
-    // compute insert index
-    let insertIndex = toList.length;
-
-    // if dropping over a CARD, insert at that card's index
-    if (!overId.startsWith("column:")) {
-      const overIndex = toList.findIndex((a) => a.id === overId);
-      if (overIndex >= 0) insertIndex = overIndex;
-    }
-    // if dropping over a COLUMN, append to end (insertIndex already = length)
-
-    toList.splice(insertIndex, 0, moving);
-
-    // reassign sequential positions for both affected stages
-    const rePos = (list: Application[]) => list.map((a, i) => ({ ...a, position: i }));
-
-    const updatedFrom = rePos(fromList);
-    const updatedTo = fromStageId === toStageId ? updatedFrom : rePos(toList);
-
-    // capture final position of moving
-    const movedList = fromStageId === toStageId ? updatedFrom : updatedTo;
-    const idx = movedList.findIndex((a) => a.id === appId);
-    nextPosition = idx >= 0 ? idx : 0;
-    nextStageId = toStageId;
-
-    // write back into next array
-    const patchMap = new Map<string, Application>();
-    for (const a of updatedFrom) patchMap.set(a.id, a);
-    for (const a of updatedTo) patchMap.set(a.id, a);
-
-    return next.map((a) => patchMap.get(a.id) ?? a);
-  });
-
-  // PERSIST (server truth)
-  try {
-    await moveM.mutateAsync({ id: appId, stageId: nextStageId, position: nextPosition });
-  } catch {
-    setAppsState(snapshotRef.current);
-  }
-}
-
-
-    function getStageIdFromOver(overId: string): string | null {
-      if (stages.some((s) => s.id === overId)) return overId;;
-      return findStageIdOfApp(overId); // if over a card id
-    }
 
   function buildStageLists(list: Application[]) {
     const map = new Map<string, Application[]>();
@@ -166,26 +115,155 @@ export default function Board({
     return map;
   }
 
-  if (loading) return <div className="p-2">Loading board...</div>;
+  function clearRaf() {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    pendingOverRef.current = null;
+  }
 
+  function applyOptimisticMove(appId: string, overId: string) {
+    setAppsState((prev) => {
+      const next = prev.map((a) => ({ ...a }));
+      const stageLists = buildStageLists(next);
+
+      const fromStageId = findStageIdOfApp(appId, stageLists);
+      if (!fromStageId) return prev;
+
+      const toStageId = getStageIdFromOver(overId, stageLists) ?? fromStageId;
+
+      const moving = next.find((a) => a.id === appId);
+      if (!moving) return prev;
+
+      const fromList = stageLists.get(fromStageId) ?? [];
+      const toList = stageLists.get(toStageId) ?? [];
+
+      // remove
+      const fromIndex = fromList.findIndex((a) => a.id === appId);
+      if (fromIndex >= 0) fromList.splice(fromIndex, 1);
+
+      // stage update
+      moving.stageId = toStageId;
+
+      // insert
+      let insertIndex = toList.length;
+      if (overId !== toStageId) {
+        const overIndex = toList.findIndex((a) => a.id === overId);
+        if (overIndex >= 0) insertIndex = overIndex;
+      }
+      toList.splice(insertIndex, 0, moving);
+
+      // re-position affected stages
+      const rePos = (list: Application[]) => list.map((a, i) => ({ ...a, position: i }));
+      const updatedFrom = rePos(fromList);
+      const updatedTo = fromStageId === toStageId ? updatedFrom : rePos(toList);
+
+      const patchMap = new Map<string, Application>();
+      for (const a of updatedFrom) patchMap.set(a.id, a);
+      for (const a of updatedTo) patchMap.set(a.id, a);
+
+      return next.map((a) => patchMap.get(a.id) ?? a);
+    });
+  }
+
+  function onDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+    snapshotRef.current = appsState; // rollback snapshot at start
+    lastOverIdRef.current = null;
+    clearRaf();
+  }
+
+  function onDragOver(e: DragOverEvent) {
+    const { active, over } = e;
+    if (!over) return;
+
+    const appId = String(active.id);
+    const overId = String(over.id);
+
+    if (lastOverIdRef.current === overId) return;
+    lastOverIdRef.current = overId;
+
+    pendingOverRef.current = { appId, overId };
+
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const pending = pendingOverRef.current;
+      pendingOverRef.current = null;
+      if (!pending) return;
+      applyOptimisticMove(pending.appId, pending.overId);
+    });
+  }
+
+  async function onDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+
+    clearRaf();
+    setActiveId(null);
+    lastOverIdRef.current = null;
+
+    if (!over) {
+      setAppsState(snapshotRef.current);
+      return;
+    }
+
+    const appId = String(active.id);
+    const overId = String(over.id);
+
+    // compute final from current optimistic state safely
+    const stageLists = buildStageLists(appsState.map((a) => ({ ...a })));
+    const toStageId = getStageIdFromOver(overId, stageLists) ?? findStageIdOfApp(appId, stageLists);
+    if (!toStageId) return;
+
+    const finalList = stageLists.get(toStageId) ?? [];
+    const idx = finalList.findIndex((a) => a.id === appId);
+    const nextPosition = idx >= 0 ? idx : 0;
+
+    try {
+      await moveM.mutateAsync({ id: appId, stageId: toStageId, position: nextPosition });
+    } catch {
+      setAppsState(snapshotRef.current);
+    }
+  }
+
+  function onDragCancel() {
+    clearRaf();
+    setActiveId(null);
+    lastOverIdRef.current = null;
+    setAppsState(snapshotRef.current);
+  }
+
+  if (loading) return <div className="p-2">Loading board...</div>;
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={rectIntersection}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      collisionDetection={closestCorners}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
     >
       <div className="flex gap-3 overflow-x-auto">
         {stages.map((s) => (
           <Column
             key={s.id}
             stage={s}
-            apps={(byStage.get(s.id) ?? [])}
+            apps={byStage.get(s.id) ?? []}
             onCardClick={onCardClick}
           />
         ))}
       </div>
+
+      <DragOverlay dropAnimation={dropAnimation}>
+        {activeApp ? (
+          <div className="w-[280px]">
+            <div className="w-full text-left border p-2 bg-white shadow-lg">
+              <div className="font-medium">{activeApp.company}</div>
+              <div className="text-sm opacity-70">{activeApp.role}</div>
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
