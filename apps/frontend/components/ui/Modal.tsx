@@ -37,7 +37,7 @@ export default function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 overflow-y-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -53,7 +53,7 @@ export default function Modal({
           />
 
           {/* Modal container */}
-          <div className="relative mx-auto mt-24 w-[92vw] max-w-md">
+          <div className="relative mx-auto my-10 w-[92vw] max-w-md px-2">
             <motion.div
               ref={panelRef}
               tabIndex={-1}
@@ -61,7 +61,7 @@ export default function Modal({
               aria-modal="true"
               aria-labelledby={ariaLabel ? undefined : labelId}
               aria-label={ariaLabel}
-              className="rounded-lg border bg-white p-4 shadow outline-none"
+              className="rounded-lg border bg-white p-4 shadow outline-none max-h-[85vh] overflow-y-auto"
               initial={{ opacity: 0, y: 24, scale: 0.96 }}
               animate={{
                 opacity: 1,
