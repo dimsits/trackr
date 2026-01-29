@@ -7,6 +7,11 @@ export type Application = {
   role: string;
   stageId: string;
   position: number;
+  location: string;
+  source: string;
+  link: string;
+  compMin: number;
+  compMax: number;
   priority?: "LOW" | "MEDIUM" | "HIGH";
   status?: "ACTIVE" | "ARCHIVED";
 };
