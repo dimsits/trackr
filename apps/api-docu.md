@@ -124,6 +124,19 @@ Authenticate using email and password.
 }
 ```
 
+### POST `/api/auth/register`
+
+Create a new user account.
+
+**Request Body**
+
+```json
+{
+  "email": "user@trackr.dev",
+  "password": "password123",
+  "name": "John Doe"
+}
+
 ---
 
 ## 6. User
