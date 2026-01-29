@@ -19,8 +19,8 @@ export default function ApplicationDrawer({
   open: boolean;
   onClose: () => void;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
 
+    const [isEditing, setIsEditing] = useState(false);
   // If drawer closes or a different application opens, exit edit mode.
   useEffect(() => {
     if (!open) setIsEditing(false);
@@ -31,8 +31,6 @@ export default function ApplicationDrawer({
   }, [application?.id]);
 
   if (!application) return null;
-
-  const [isEditing, setIsEditing] = useState(false);
 
 
   return (
