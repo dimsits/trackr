@@ -11,11 +11,24 @@ export default function WorkspacesPage() {
 
   return (
     <div className="p-6 space-y-3">
-      <h1 className="text-xl font-semibold">Workspaces</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Workspaces</h1>
+
+        <Link
+          href="/workspaces/new"
+          className="text-sm underline"
+        >
+          Create workspace
+        </Link>
+      </div>
+
       <ul className="space-y-2">
         {data?.map((w) => (
           <li key={w.id} className="border p-3">
-            <Link href={`/workspaces/${w.id}`} className="font-medium">
+            <Link
+              href={`/workspaces/${w.id}`}
+              className="font-medium"
+            >
               {w.name}
             </Link>
             <div className="text-sm opacity-70">{w.role}</div>
