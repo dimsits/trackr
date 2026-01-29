@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function DrawerShell({
   open,
@@ -11,20 +12,44 @@ export default function DrawerShell({
   onClose: () => void;
   children: ReactNode;
 }) {
-  if (!open) return null;
+  // Escape-to-close (recommended)
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      {/* backdrop */}
-      <div
-        className="flex-1 bg-black/30"
-        onClick={onClose}
-      />
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <motion.div
+            className="flex-1 bg-black/30"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          />
 
-      {/* drawer */}
-      <div className="w-[420px] bg-white border-l p-4 overflow-y-auto">
-        {children}
-      </div>
-    </div>
+          {/* Drawer */}
+          <motion.div
+            className="w-[420px] bg-white border-l p-4 overflow-y-auto"
+            initial={{ x: 420 }}
+            animate={{ x: 0 }}
+            exit={{ x: 420 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            {children}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

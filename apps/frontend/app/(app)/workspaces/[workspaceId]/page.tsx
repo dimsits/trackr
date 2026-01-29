@@ -76,11 +76,11 @@ export default function WorkspaceBoardPage() {
   // -------------------------
   // GUARDS (AFTER ALL HOOKS)
   // -------------------------
-  if (pipelinesQ.isLoading) return <div className="p-6">Loading pipelines...</div>;
+  if (pipelinesQ.isLoading) return <div className="min-h-screen bg-white p-6p-">Loading pipelines...</div>;
 
   if (pipelinesQ.isError) {
     return (
-      <div className="p-6">
+      <div className="min-h-screen bg-white p-6">
         <div className="font-medium text-red-600">Failed to load pipelines</div>
         <pre className="mt-2 text-xs whitespace-pre-wrap">
           {JSON.stringify(pipelinesQ.error, null, 2)}
@@ -92,7 +92,7 @@ export default function WorkspaceBoardPage() {
   const pipelines = pipelinesQ.data ?? [];
   if (pipelines.length === 0) {
     return (
-      <div className="p-6">
+      <div className="min-h-screen bg-white p-6p-">
         <div className="font-medium">No pipelines found</div>
         <div className="text-xs opacity-70 mt-2">workspaceId: {workspaceId}</div>
       </div>
@@ -157,7 +157,7 @@ export default function WorkspaceBoardPage() {
 
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="min-h-screen bg-white p-6">
       <div className="flex gap-2 items-center">
         <h1 className="text-xl font-semibold">Board</h1>
 
@@ -176,7 +176,7 @@ export default function WorkspaceBoardPage() {
         </select>
       </div>
 
-      <form className="border p-3 space-y-2" onSubmit={submitCreate}>
+      <form className="border p-3 space-y-2 mb-5 mt-5" onSubmit={submitCreate}>
         <div className="font-medium">Add application</div>
 
         <div className="flex flex-wrap gap-2">
