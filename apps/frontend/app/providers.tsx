@@ -8,7 +8,7 @@ import { ColdStartGate } from "@/components/ColdStartGate";
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(() => makeQueryClient());
 
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
   const healthUrl = `${apiBase.replace(/\/$/, "")}/health`;
 
   // Enable only in prod (optional: also allow an override env flag)
