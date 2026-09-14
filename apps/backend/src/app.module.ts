@@ -20,19 +20,14 @@ import { TasksModule } from './tasks/tasks.module';
 import { FilesModule } from './files/files.module';
 import { MeController } from './me/me.controller';
 
-// Dev-only
+// Local-only test/debug endpoints
 import { TestModule } from './test/test.module';
-import { TestController } from './test/test.controller';
-
-const isProd = process.env.NODE_ENV === 'production';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // In Render, env vars come from the dashboard (no .env file).
-      // Locally, you can still use .env
-      envFilePath: isProd ? undefined : ['.env'],
+      envFilePath: ['.env'],
       validate: validateEnv,
     }),
 
@@ -48,17 +43,9 @@ const isProd = process.env.NODE_ENV === 'production';
     ActivitiesModule,
     TasksModule,
     FilesModule,
-
-    // Only include test endpoints in non-prod
-    ...(isProd ? [] : [TestModule]),
+    TestModule,
   ],
-  controllers: [
-    AppController,
-    MeController,
-
-    // Only include test controller in non-prod
-    ...(isProd ? [] : [TestController]),
-  ],
+  controllers: [AppController, MeController],
   providers: [AppService],
 })
 export class AppModule {}

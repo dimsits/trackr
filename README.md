@@ -128,8 +128,7 @@ download endpoints respond with `503` and an explanatory message.
 
 To enable it, set all four of `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
 `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` in `apps/backend/.env`. Setting only some
-of them is rejected at boot so the configuration cannot be half-applied. In
-production all four are required and the API refuses to start without them.
+of them is rejected at boot so the configuration cannot be half-applied.
 
 ### Troubleshooting
 

@@ -8,10 +8,8 @@ export const R2_CLIENT = 'R2_CLIENT';
 /**
  * Builds the R2 client, or returns `null` when object storage is not configured.
  *
- * Returning `null` keeps the whole API bootable in local development without
- * credentials - only the file upload/download endpoints degrade. Production is
- * still fail-fast: `validateEnv` rejects a production boot with missing R2 vars
- * before this factory ever runs.
+ * Returning `null` keeps the API bootable locally without credentials - only
+ * the file upload/download endpoints degrade; every other feature works.
  */
 export function createR2Client(): S3Client | null {
   if (!isR2Configured()) {

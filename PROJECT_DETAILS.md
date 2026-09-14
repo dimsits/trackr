@@ -95,7 +95,7 @@ trackr/
 ### Infrastructure
 - **Database**: PostgreSQL in Docker
 - **File Storage**: Cloudflare R2 (planned)
-- **Deployment**: Manual build process (npm scripts)
+- **Runtime**: Local only - no deployment target is configured
 - **Environment**: Development with hot reload
 
 ## 4. Database Schema and Data Model
@@ -442,7 +442,10 @@ backend/src/
 - **Search and Filtering**: Application discovery
 - **Data Export**: Future feature for data portability
 
-## 10. Deployment and Infrastructure
+## 10. Local Environment
+
+Trackr runs locally only; no production build, hosting provider, or deployment
+pipeline is configured for this repository.
 
 ### Development Environment
 
@@ -452,12 +455,6 @@ backend/src/
 - **Frontend**: hot reload (`next dev`)
 - **Concurrent**: `npm run dev` runs both services with `WEB` / `API` log prefixes,
   after ensuring PostgreSQL is healthy and migrations are applied
-
-### Production Build
-
-- **Backend**: `npm run build` → `npm run start:prod`
-- **Frontend**: `npm run build` → `npm run start`
-- **Database**: Manual migration with Prisma
 
 ### Environment Configuration
 
@@ -469,11 +466,8 @@ backend/src/
   missing or invalid variable without printing values
 - **Docker**: containerized database for consistency
 
-### Future Infrastructure Plans
+### Possible Future Work
 
-- Container orchestration (Docker Compose/Kubernetes)
-- CI/CD pipeline
-- Cloud database (AWS RDS/Supabase)
 - Object storage (Cloudflare R2)
 - Background job processing (BullMQ/Redis)
 
@@ -691,8 +685,6 @@ Per workspace: `npm run <script> --workspace @trackr/backend` (or
 - GraphQL API alongside REST
 - Redis caching layer
 - Elasticsearch for advanced search
-- Docker containerization for full stack
-- CI/CD pipeline implementation
 - Monitoring and logging
 - Database connection pooling optimization
 
@@ -700,7 +692,6 @@ Per workspace: `npm run <script> --workspace @trackr/backend` (or
 - Microservices consideration for scaling
 - Event-driven architecture for activities
 - CQRS pattern for complex queries
-- Multi-region deployment support
 
 ## 18. Contributing Guidelines
 

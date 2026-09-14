@@ -28,7 +28,6 @@ trackr/
 │   │   │   ├── file.svg
 │   │   │   ├── globe.svg
 │   │   │   ├── next.svg
-│   │   │   ├── vercel.svg
 │   │   │   └── window.svg
 │   │   ├── lib/
 │   │   │   ├── api.ts

@@ -108,7 +108,7 @@ Why last:
 
 ---
 
-## Phase 6 — Verification & deployment
+## Phase 6 — Verification
 
 You manually verify:
 

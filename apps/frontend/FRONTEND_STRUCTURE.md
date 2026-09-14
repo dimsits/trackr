@@ -112,7 +112,6 @@ frontend/
 │   ├── file.svg
 │   ├── globe.svg
 │   ├── next.svg
-│   ├── vercel.svg
 │   └── window.svg
 ├── dev-pipeline.MD
 ├── eslint.config.mjs

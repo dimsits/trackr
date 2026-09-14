@@ -1,9 +1,9 @@
 /**
- * Environment validation for the Trackr API.
+ * Environment validation for the Trackr API (local development only).
  *
  * Rules of the house:
  *  - Every message names the offending variable, never its value.
- *  - Local development stays forgiving (R2 is optional); production is strict.
+ *  - R2 is optional: leave all four variables unset to run without file storage.
  */
 
 /** The four variables that must be present together to enable file storage. */
@@ -53,7 +53,6 @@ export function missingR2Vars(env: EnvLike = process.env): string[] {
  * so a misconfigured app fails at boot with one aggregated, readable report.
  */
 export function validateEnv(config: EnvLike): EnvLike {
-  const isProd = read(config, 'NODE_ENV') === 'production';
   const errors: string[] = [];
 
   // --- Database -----------------------------------------------------------
@@ -74,10 +73,6 @@ export function validateEnv(config: EnvLike): EnvLike {
     errors.push(
       'JWT_SECRET is missing. `npm run setup` generates a random development secret for you.',
     );
-  } else if (isProd && jwtSecret.length < 32) {
-    errors.push(
-      'JWT_SECRET is too short: at least 32 characters are required in production.',
-    );
   }
 
   // --- HTTP ---------------------------------------------------------------
@@ -93,17 +88,11 @@ export function validateEnv(config: EnvLike): EnvLike {
 
   // --- Object storage -----------------------------------------------------
   const missing = missingR2Vars(config);
-  if (missing.length > 0) {
-    if (isProd) {
-      errors.push(
-        `Object storage is required in production but these variables are missing: ${missing.join(', ')}.`,
-      );
-    } else if (missing.length < R2_REQUIRED_VARS.length) {
-      // Partially configured is always a mistake - all-or-nothing is the contract.
-      errors.push(
-        `Object storage is partially configured. Set the remaining variables or unset them all: ${missing.join(', ')}.`,
-      );
-    }
+  if (missing.length > 0 && missing.length < R2_REQUIRED_VARS.length) {
+    // Partially configured is always a mistake - all-or-nothing is the contract.
+    errors.push(
+      `Object storage is partially configured. Set the remaining variables or unset them all: ${missing.join(', ')}.`,
+    );
   }
 
   if (errors.length > 0) {

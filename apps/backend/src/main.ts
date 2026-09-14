@@ -36,7 +36,7 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  // CORS: allow localhost in dev, and your deployed frontend in prod
+  // CORS: allow the local frontend dev server (override with CORS_ORIGIN).
   const corsOrigin = parseCorsOrigins(process.env.CORS_ORIGIN);
 
   app.enableCors({
@@ -47,9 +47,9 @@ async function bootstrap() {
 
   const prismaService = app.get(PrismaService);
 
-  // Render requires binding to PORT and 0.0.0.0
+  // Local-only: bind to loopback so the API is never reachable off-machine.
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port, '127.0.0.1');
 
   const base = `http://localhost:${port}${apiPrefix ? `/${apiPrefix}` : ''}`;
   Logger.log(`Trackr API listening on ${base}`, 'Bootstrap');
