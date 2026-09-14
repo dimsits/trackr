@@ -1,6 +1,5 @@
 import { auth } from "./auth";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL!;
+import { API_BASE_URL } from "./config";
 
 type ApiError = { status: number; message: string };
 
@@ -23,7 +22,7 @@ export async function api<T>(
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers,
     cache: "no-store",

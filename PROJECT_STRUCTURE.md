@@ -5,7 +5,12 @@ trackr/
 ├── .gitignore
 ├── README.md
 ├── package.json
-├── package-lock.json
+├── package-lock.json          # the single, authoritative lockfile
+├── compose.yaml               # local PostgreSQL
+├── scripts/
+│   ├── lib.mjs                # shared helpers (Node built-ins only)
+│   ├── setup.mjs              # `npm run setup`
+│   └── dev-preflight.mjs      # runs before `npm run dev`
 ├── api-docu.md
 ├── apps/
 │   ├── frontend/
@@ -14,7 +19,7 @@ trackr/
 │   │   ├── eslint.config.mjs
 │   │   ├── next-env.d.ts
 │   │   ├── next.config.ts
-│   │   ├── package-lock.json
+│   │   ├── .env.example
 │   │   ├── package.json
 │   │   ├── postcss.config.mjs
 │   │   ├── tailwind.config.ts
@@ -93,10 +98,9 @@ trackr/
 │       ├── .gitignore
 │       ├── .prettierrc
 │       ├── backend-architecture.md
-│       ├── docker-compose.yml
+│       ├── .env.example
 │       ├── eslint.config.mjs
 │       ├── nest-cli.json
-│       ├── package-lock.json
 │       ├── package.json
 │       ├── prisma.config.ts
 │       ├── README.md

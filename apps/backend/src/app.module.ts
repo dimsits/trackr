@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { validateEnv } from './config/env.validation';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -31,6 +33,7 @@ const isProd = process.env.NODE_ENV === 'production';
       // In Render, env vars come from the dashboard (no .env file).
       // Locally, you can still use .env
       envFilePath: isProd ? undefined : ['.env'],
+      validate: validateEnv,
     }),
 
     PrismaModule,

@@ -27,34 +27,54 @@
 
 ## Project setup
 
+This app is a workspace of the Trackr monorepo. **Do not run `npm install`
+here** - dependencies are installed once from the repository root:
+
 ```bash
-$ npm install
+# from the repository root
+npm run setup
 ```
 
-## Compile and run the project
+See the root `README.md` for the full Quick start.
+
+## Compile and run
+
+From the repository root:
 
 ```bash
-# development
-$ npm run start
+npm run dev              # frontend + backend together
+npm run dev:backend      # this app only (prepares the database first)
+```
 
-# watch mode
-$ npm run start:dev
+Or target this workspace directly:
 
-# production mode
-$ npm run start:prod
+```bash
+npm run dev   --workspace @trackr/backend   # nest start --watch
+npm run build --workspace @trackr/backend
+npm run start:prod --workspace @trackr/backend
+```
+
+The API listens on `PORT` (default 3001) behind the `API_PREFIX` prefix
+(default `api`), so it is served at http://localhost:3001/api with a health
+check at http://localhost:3001/api/health.
+
+## Database
+
+PostgreSQL is defined in the repository-root `compose.yaml`:
+
+```bash
+npm run db:up        # start
+npm run db:migrate   # prisma migrate deploy
+npm run db:seed      # idempotent development seed
+npm run db:down      # stop (the data volume is kept)
 ```
 
 ## Run tests
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run test      --workspace @trackr/backend
+npm run test:e2e  --workspace @trackr/backend
+npm run test:cov  --workspace @trackr/backend
 ```
 
 ## Deployment

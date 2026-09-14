@@ -1,20 +1,35 @@
 {
   "name": "trackr",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Trackr - visual job/OJT application tracker. npm workspaces monorepo (Next.js frontend + NestJS backend).",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
-    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:backend": "cd ./apps/backend && npm run start:dev",
-    "dev:frontend": "cd ./apps/frontend && npm run dev",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup": "node scripts/setup.mjs",
+    "predev": "node scripts/dev-preflight.mjs",
+    "dev": "concurrently --kill-others-on-fail --names WEB,API --prefix-colors cyan.bold,magenta.bold \"npm run dev --workspace @trackr/frontend\" \"npm run dev --workspace @trackr/backend\"",
+    "dev:frontend": "npm run dev --workspace @trackr/frontend",
+    "predev:backend": "node scripts/dev-preflight.mjs",
+    "dev:backend": "npm run dev --workspace @trackr/backend",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db",
+    "db:migrate": "npm run db:migrate --workspace @trackr/backend",
+    "db:seed": "npm run db:seed --workspace @trackr/backend"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dimsits/trackr.git"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
@@ -23,10 +38,7 @@
     "url": "https://github.com/dimsits/trackr/issues"
   },
   "homepage": "https://github.com/dimsits/trackr#readme",
-  "dependencies": {
-    "concurrently": "^9.2.1"
-  },
   "devDependencies": {
-    "@types/uuid": "^10.0.0"
+    "concurrently": "^9.2.1"
   }
 }

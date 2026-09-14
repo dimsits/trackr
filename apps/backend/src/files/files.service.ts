@@ -1,9 +1,16 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkspaceAccessService } from '../workspace-access/workspace-access.service';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+import { R2_CLIENT } from './r2.client';
 
 function safeFilename(name: string) {
   // keep simple; you can improve later
@@ -12,15 +19,28 @@ function safeFilename(name: string) {
 
 @Injectable()
 export class FilesService {
-  private readonly bucket = process.env.R2_BUCKET!;
+  private readonly bucket = process.env.R2_BUCKET ?? '';
   private readonly ttlSeconds = Number(process.env.R2_URL_TTL_SECONDS ?? '600');
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: WorkspaceAccessService,
-    @Inject('R2_CLIENT') private readonly r2: S3Client,
-  ) {
-    if (!this.bucket) throw new Error('R2_BUCKET is not set');
+    @Inject(R2_CLIENT) private readonly r2: S3Client | null,
+  ) {}
+
+  /**
+   * Object storage is optional in local development, so the presigning paths
+   * assert it lazily. Listing and soft-deleting file metadata stay available
+   * because they never touch R2.
+   */
+  private requireR2(): S3Client {
+    if (!this.r2 || !this.bucket) {
+      throw new ServiceUnavailableException(
+        'File storage is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, ' +
+          'R2_SECRET_ACCESS_KEY and R2_BUCKET in apps/backend/.env to enable uploads.',
+      );
+    }
+    return this.r2;
   }
 
   private async getApplicationOrThrow(applicationId: string) {
@@ -33,6 +53,8 @@ export class FilesService {
   }
 
   async createUploadUrl(userId: string, input: { applicationId: string; filename: string; contentType: string; size: number }) {
+    const r2 = this.requireR2();
+
     const app = await this.getApplicationOrThrow(input.applicationId);
     await this.access.assertMember(userId, app.workspaceId);
 
@@ -40,7 +62,7 @@ export class FilesService {
     const key = `workspaces/${app.workspaceId}/applications/${app.id}/${uuidv4()}-${safeFilename(input.filename)}`;
 
     const url = await getSignedUrl(
-      this.r2,
+      r2,
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -91,6 +113,8 @@ export class FilesService {
   }
 
   async createDownloadUrl(userId: string, fileId: string) {
+    const r2 = this.requireR2();
+
     const file = await this.prisma.file.findFirst({
       where: { id: fileId, deletedAt: null },
       select: {
@@ -111,7 +135,7 @@ export class FilesService {
     }
 
     const url = await getSignedUrl(
-      this.r2,
+      r2,
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: file.storageKey,

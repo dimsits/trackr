@@ -1,0 +1,35 @@
+# Local development infrastructure for Trackr.
+#
+# The project name is pinned to "trackr" so the Postgres volume always resolves
+# to "trackr_trackr_pgdata" - the same volume this repo used when the Compose
+# file still lived in apps/backend. Moving the file here therefore adopts any
+# existing local database instead of orphaning it.
+name: trackr
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trackr
+      # Matches DATABASE_URL in apps/backend/.env.example, and the credentials
+      # existing local volumes were initialised with. POSTGRES_PASSWORD only
+      # takes effect when the volume is first created.
+      POSTGRES_PASSWORD: trackrpass
+      POSTGRES_DB: trackr
+    # Host port is overridable: if something else already owns 5432 (a native
+    # Postgres install, another project), put POSTGRES_PORT=5433 in a .env file
+    # next to this one and update DATABASE_URL in apps/backend/.env to match.
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - trackr_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trackr -d trackr"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+volumes:
+  trackr_pgdata:

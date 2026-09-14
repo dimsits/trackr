@@ -12,6 +12,158 @@ Trackr is designed to be:
 
 ---
 
+## 1) Quick start
+
+Trackr is a single npm workspace. You never install dependencies per app, and
+you never need a second terminal.
+
+```bash
+git clone <repository-url>
+cd trackr
+npm run setup
+npm run dev
+```
+
+| URL | What |
+| --- | --- |
+| http://localhost:3000 | Frontend (Next.js) |
+| http://localhost:3001/api | API base (NestJS) |
+| http://localhost:3001/api/health | Health check |
+| http://localhost:3001/docs | Swagger UI |
+| localhost:5432 | PostgreSQL (user / password / db: `trackr` / `trackrpass` / `trackr`) |
+
+Seeded development login: **seed@trackr.dev** / **password123**
+
+### Prerequisites
+
+| Tool | Version | Notes |
+| --- | --- | --- |
+| Git | any recent | to clone the repository |
+| Node.js | **>= 20.11.0** | `setup` refuses to run on older releases |
+| npm | **>= 10** | ships with Node.js; workspaces are required |
+| Docker Desktop | any recent | must be **running** - it hosts PostgreSQL |
+
+No global CLIs are needed. Nest, Next, Prisma, ESLint and Jest all run from the
+repository's own `node_modules`.
+
+### What `npm run setup` does
+
+It is safe to re-run at any time - it is idempotent and never destroys data.
+
+1. Checks Node, npm, Docker, the Docker daemon and Docker Compose, failing early
+   with an actionable message if any is missing.
+2. Runs `npm ci` at the root, installing both workspaces from the single
+   committed lockfile.
+3. Creates the local environment files listed below **only if they are missing**.
+4. Starts PostgreSQL and waits for its healthcheck to pass.
+5. Generates the Prisma client and applies committed migrations with
+   `prisma migrate deploy` (never `migrate reset`).
+6. Runs the idempotent development seed.
+7. Builds both applications as an integration check.
+
+### Environment files
+
+| File | Created from | Contains |
+| --- | --- | --- |
+| `apps/backend/.env` | `apps/backend/.env.example` | database URL, JWT settings, CORS origin, optional R2 |
+| `apps/frontend/.env.local` | `apps/frontend/.env.example` | `NEXT_PUBLIC_API_URL` |
+
+**Existing environment files are never overwritten.** If `apps/backend/.env`
+already exists, `setup` leaves it exactly as it is, including your secrets. When
+it *does* create the backend file, it generates a fresh random `JWT_SECRET`; no
+secret is ever committed to the repository.
+
+`NEXT_PUBLIC_API_URL` must include the backend's global prefix
+(`http://localhost:3001/api`). The frontend derives both its API base and its
+health-probe URL from that single value, so the two can never drift apart.
+
+### Everyday commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Ensures PostgreSQL is healthy, applies pending migrations, then runs both apps with `WEB` / `API` prefixed logs |
+| `npm run dev:frontend` | Frontend only |
+| `npm run dev:backend` | Backend only (also ensures the database is ready) |
+| `npm run build` | Builds both workspaces |
+| `npm run lint` | Lints both workspaces |
+| `npm run test` | Runs workspace test suites |
+| `npm run db:up` / `db:down` | Start / stop PostgreSQL |
+| `npm run db:logs` | Follow PostgreSQL logs |
+| `npm run db:migrate` | Apply committed migrations (`prisma migrate deploy`) |
+| `npm run db:seed` | Re-run the idempotent seed |
+
+`npm run dev` applies migrations but deliberately **does not seed** on every
+start. Run `npm run db:seed` when you want the sample data refreshed.
+
+To target one workspace directly, use npm's workspace flag rather than `cd`:
+
+```bash
+npm run <script> --workspace @trackr/backend
+npm run <script> --workspace @trackr/frontend
+```
+
+### Database persistence
+
+PostgreSQL data lives in the Docker volume `trackr_trackr_pgdata` and **survives
+everything in this repository**:
+
+* `Ctrl+C` stops the apps but intentionally leaves PostgreSQL running, so the
+  next `npm run dev` starts fast.
+* `npm run db:down` stops and removes the *container*; the volume, and therefore
+  your data, is kept.
+* Nothing in `setup` or `dev` ever runs `prisma migrate reset` or deletes a volume.
+
+To deliberately start from an empty database (this **erases** local data):
+
+```bash
+docker compose down -v
+npm run setup
+```
+
+### Optional: Cloudflare R2 file storage
+
+File uploads are optional locally. With no R2 credentials the API starts
+normally, logs a warning, and every non-file feature works; only the upload and
+download endpoints respond with `503` and an explanatory message.
+
+To enable it, set all four of `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY` and `R2_BUCKET` in `apps/backend/.env`. Setting only some
+of them is rejected at boot so the configuration cannot be half-applied. In
+production all four are required and the API refuses to start without them.
+
+### Troubleshooting
+
+**"The Docker daemon is not running"**
+Start Docker Desktop and wait until it reports *Engine running*, then re-run the
+command. `setup` and `dev` both check this before doing anything else.
+
+**Port 5432 already in use / "Authentication failed against database server"**
+Another PostgreSQL (a native install, or another project's container) already
+owns the port, so Trackr connects to the wrong server. Either stop that service,
+or move Trackr's database to a free port by creating a `.env` file in the
+repository root:
+
+```bash
+POSTGRES_PORT=5433
+```
+
+and changing the port in `DATABASE_URL` inside `apps/backend/.env` to match.
+
+**Port 3000 or 3001 already in use**
+Stop whatever owns the port, or set `PORT` in `apps/backend/.env` (and update
+`NEXT_PUBLIC_API_URL` in `apps/frontend/.env.local` to match).
+
+**"Invalid environment configuration"**
+The API validates its environment at boot and lists every offending variable by
+name, without printing values. Compare `apps/backend/.env` against
+`apps/backend/.env.example`, or delete the file and re-run `npm run setup` to
+regenerate it.
+
+**`npm ci` reports the lockfile is out of sync**
+Run `npm install` once to refresh the root `package-lock.json`, then commit it.
+
+---
+
 ## 2) High-level system
 
 ### Context

@@ -80,8 +80,9 @@ coverage/
 # =========================
 # Prisma / DB
 # =========================
-prisma/migrations/*
-!prisma/migrations/.gitkeep
+# Migrations ARE tracked on purpose: `npm run setup` / `npm run dev` apply them
+# with `prisma migrate deploy`, which can only replay committed migrations.
+prisma/generated/
 
 # =========================
 # Misc

@@ -446,10 +446,12 @@ backend/src/
 
 ### Development Environment
 
-- **Database**: PostgreSQL in Docker Compose
-- **Backend**: Hot reload with `npm run start:dev`
-- **Frontend**: Hot reload with `npm run dev`
-- **Concurrent**: `npm run dev` runs both services
+- **Repository**: a single npm workspace; all dependencies install from the root
+- **Database**: PostgreSQL via the root `compose.yaml`
+- **Backend**: hot reload (`nest start --watch`)
+- **Frontend**: hot reload (`next dev`)
+- **Concurrent**: `npm run dev` runs both services with `WEB` / `API` log prefixes,
+  after ensuring PostgreSQL is healthy and migrations are applied
 
 ### Production Build
 
@@ -459,9 +461,13 @@ backend/src/
 
 ### Environment Configuration
 
-- **Backend**: `.env` file for database and secrets
-- **Frontend**: Environment variables for API URLs
-- **Docker**: Containerized database for consistency
+- **Backend**: `apps/backend/.env` (created by `npm run setup` from `.env.example`)
+- **Frontend**: `apps/frontend/.env.local`, holding `NEXT_PUBLIC_API_URL`
+- **Contract**: the API prefix is `API_PREFIX` (default `api`) and the browser
+  allow-list is `CORS_ORIGIN`; `NEXT_PUBLIC_API_URL` includes the prefix
+- **Validation**: the API validates its environment at boot and names any
+  missing or invalid variable without printing values
+- **Docker**: containerized database for consistency
 
 ### Future Infrastructure Plans
 
@@ -473,53 +479,45 @@ backend/src/
 
 ## 11. Development Setup
 
+See the Quick start section of `README.md` for the full walkthrough.
+
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
-- Docker and Docker Compose
-- PostgreSQL knowledge (optional)
+- Git
+- Node.js >= 20.11.0
+- npm >= 10 (workspaces)
+- Docker Desktop, running
+
+No globally installed Nest, Next or Prisma CLI is required.
 
 ### Installation Steps
 
-1. **Clone Repository**
-   ```bash
-   git clone <repository-url>
-   cd trackr
-   ```
+```bash
+git clone <repository-url>
+cd trackr
+npm run setup
+npm run dev
+```
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   cd apps/backend && npm install
-   cd ../frontend && npm install
-   ```
-
-3. **Start Database**
-   ```bash
-   cd apps/backend
-   docker-compose up -d
-   ```
-
-4. **Database Setup**
-   ```bash
-   npx prisma migrate dev
-   npx prisma db seed
-   ```
-
-5. **Start Development Servers**
-   ```bash
-   # From root directory
-   npm run dev
-   ```
+`npm run setup` checks prerequisites, runs `npm ci` at the root for both
+workspaces, creates any missing environment files (never overwriting existing
+ones), starts PostgreSQL, applies committed migrations with
+`prisma migrate deploy`, runs the idempotent seed, and builds both apps. It is
+safe to re-run.
 
 ### Available Scripts
 
-- `npm run dev` - Start both frontend and backend
-- `npm run dev:backend` - Start backend only
-- `npm run dev:frontend` - Start frontend only
-- `npm run build` - Build for production
-- `npm run test` - Run backend tests
+Root:
+
+- `npm run setup` - one-time integration; idempotent
+- `npm run dev` - both apps, with the database prepared first
+- `npm run dev:frontend` / `npm run dev:backend` - a single app
+- `npm run build` / `npm run lint` / `npm run test` - across both workspaces
+- `npm run db:up` / `db:down` / `db:logs` - PostgreSQL lifecycle
+- `npm run db:migrate` / `db:seed` - schema and sample data
+
+Per workspace: `npm run <script> --workspace @trackr/backend` (or
+`@trackr/frontend`).
 
 ### Default Credentials
 
@@ -529,8 +527,11 @@ backend/src/
 ## 12. File Structure Details
 
 ### Root Level
-- `package.json` - Monorepo orchestration
-- `README.md` - Project overview
+- `package.json` - workspace root; the only dependency-management entry point
+- `package-lock.json` - the single authoritative lockfile
+- `compose.yaml` - local PostgreSQL
+- `scripts/` - `setup.mjs` and `dev-preflight.mjs` (Node built-ins only)
+- `README.md` - project overview and Quick start
 - `PROJECT_STRUCTURE.md` - File tree documentation
 - `.gitignore` - Git ignore rules
 
@@ -538,8 +539,9 @@ backend/src/
 - `src/` - Source code
 - `prisma/` - Database schema and migrations
 - `test/` - End-to-end tests
-- `docker-compose.yml` - Database container
 - `eslint.config.mjs` - Linting configuration
+
+(The database container is defined in the repository-root `compose.yaml`.)
 
 ### Frontend Structure
 - `app/` - Next.js app directory

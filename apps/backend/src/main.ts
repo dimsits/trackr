@@ -2,7 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { normalizeApiPrefix, parseCorsOrigins } from './config/env.validation';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,7 +16,10 @@ async function bootstrap() {
     }),
   );
 
-  app.setGlobalPrefix('api');
+  // Single source of truth for the route prefix; the frontend's
+  // NEXT_PUBLIC_API_URL must point at http://<host>:<port>/<API_PREFIX>.
+  const apiPrefix = normalizeApiPrefix(process.env.API_PREFIX);
+  if (apiPrefix) app.setGlobalPrefix(apiPrefix);
 
   const config = new DocumentBuilder()
     .setTitle('Trackr API')
@@ -33,9 +37,7 @@ async function bootstrap() {
   });
 
   // CORS: allow localhost in dev, and your deployed frontend in prod
-  const corsOrigin =
-    process.env.CORS_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean) ??
-    ['http://localhost:3000'];
+  const corsOrigin = parseCorsOrigins(process.env.CORS_ORIGIN);
 
   app.enableCors({
     origin: corsOrigin,
@@ -48,5 +50,10 @@ async function bootstrap() {
   // Render requires binding to PORT and 0.0.0.0
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
   await app.listen(port, '0.0.0.0');
+
+  const base = `http://localhost:${port}${apiPrefix ? `/${apiPrefix}` : ''}`;
+  Logger.log(`Trackr API listening on ${base}`, 'Bootstrap');
+  Logger.log(`Health check at ${base}/health`, 'Bootstrap');
+  Logger.log(`Swagger UI at http://localhost:${port}/docs`, 'Bootstrap');
 }
 bootstrap();
