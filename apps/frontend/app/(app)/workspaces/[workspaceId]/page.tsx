@@ -1,343 +1,192 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import Board from "@/components/board/Board";
-import ApplicationDrawer from "@/components/application/ApplicationDrawer";
-import Modal from "@/components/ui/Modal";
-import CreatePipelineForm from "@/components/forms/CreatePipelineForm";
+import ApplicationSheet from "@/features/application-details/ApplicationSheet";
+import Board from "@/features/board/Board";
+import BoardHeader from "@/features/workspace-board/BoardHeader";
+import {
+  BoardErrorState,
+  BoardSkeleton,
+  NoPipelinesState,
+  NoStagesState,
+  PipelineMissingState,
+} from "@/features/workspace-board/BoardStates";
+import CreateApplicationDialog from "@/features/workspace-board/CreateApplicationDialog";
+import CreatePipelineDialog from "@/features/workspace-board/CreatePipelineDialog";
+import { useBoardFilters } from "@/features/workspace-board/useBoardFilters";
 
+import { useApplications } from "@/hooks/useApplications";
 import { usePipelines } from "@/hooks/usePipelines";
 import { useStages } from "@/hooks/useStages";
-import { useApplications } from "@/hooks/useApplications";
-import type { Application } from "@/hooks/useApplications";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { getErrorMessage } from "@/lib/errors";
 
-import { useCreateApplication } from "@/hooks/useCreateApplication";
-import { useUpdateApplication } from "@/hooks/useUpdateApplication";
-import { useDeleteApplication } from "@/hooks/useDeleteApplication";
+type OpenDialog = "application" | "pipeline" | null;
 
 export default function WorkspaceBoardPage() {
-  // --- router hooks ---
+  // --- route ---
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const sp = useSearchParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const pipelineIdFromUrl = searchParams.get("pipelineId") ?? "";
 
-  const pipelineIdFromUrl = sp.get("pipelineId") ?? "";
-
-  // --- data hooks (MUST be called every render) ---
+  // --- queries ---
+  const workspacesQ = useWorkspaces();
   const pipelinesQ = usePipelines(workspaceId);
+  const pipelines = useMemo(() => pipelinesQ.data ?? [], [pipelinesQ.data]);
 
-  const chosenPipelineId = useMemo(() => {
-    if (pipelineIdFromUrl) return pipelineIdFromUrl;
-    const ps = pipelinesQ.data ?? [];
-    return (ps.find((p) => p.isDefault) ?? ps[0])?.id ?? "";
-  }, [pipelineIdFromUrl, pipelinesQ.data]);
+  const defaultPipelineId = (pipelines.find((p) => p.isDefault) ?? pipelines[0])?.id ?? "";
+  const chosenPipelineId = pipelineIdFromUrl || defaultPipelineId;
+  const pipeline = pipelines.find((p) => p.id === chosenPipelineId);
+  const pipelineMissing = pipelinesQ.isSuccess && Boolean(chosenPipelineId) && !pipeline;
+  const activePipelineId = pipelineMissing ? "" : chosenPipelineId;
 
-  const stagesQ = useStages(chosenPipelineId);
-  const appsQ = useApplications(workspaceId, chosenPipelineId);
+  const stagesQ = useStages(activePipelineId);
+  const appsQ = useApplications(workspaceId, activePipelineId);
 
-  const sortedStages = useMemo(
+  const stages = useMemo(
     () => (stagesQ.data ?? []).slice().sort((a, b) => a.position - b.position),
     [stagesQ.data]
   );
-
-  const sortedApps = useMemo(
-    () =>
-      (appsQ.data ?? [])
-        .slice()
-        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+  const applications = useMemo(
+    () => (appsQ.data ?? []).slice().sort((a, b) => a.position - b.position),
     [appsQ.data]
   );
 
-  // --- write hooks (also must be unconditional) ---
-  const createM = useCreateApplication(workspaceId, chosenPipelineId);
-  const updateM = useUpdateApplication(workspaceId, chosenPipelineId);
-  const deleteM = useDeleteApplication(workspaceId, chosenPipelineId);
+  const filters = useBoardFilters(applications);
+  const workspaceName = workspacesQ.data?.find((w) => w.id === workspaceId)?.name;
 
-  // --- local state hooks (unconditional) ---
-  const [newCompany, setNewCompany] = useState("");
-  const [newRole, setNewRole] = useState("");
-  const [newStageId, setNewStageId] = useState("");
+  // --- local UI state ---
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  // A new key per opening gives each dialog a fresh form.
+  const [dialogKey, setDialogKey] = useState(0);
 
-  const [editing, setEditing] = useState<Application | null>(null);
-  const [editCompany, setEditCompany] = useState("");
-  const [editRole, setEditRole] = useState("");
+  const selectedApplication = selectedId ? applications.find((app) => app.id === selectedId) ?? null : null;
 
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const openApplication = useCallback((id: string) => {
+    setSelectedId(id);
+    setSheetOpen(true);
+  }, []);
 
-  // NEW: pipeline modal
-  const [createPipelineOpen, setCreatePipelineOpen] = useState(false);
+  function showDialog(dialog: Exclude<OpenDialog, null>) {
+    setDialogKey((key) => key + 1);
+    setOpenDialog(dialog);
+  }
 
-  // --- effects (unconditional) ---
+  function goToPipeline(pipelineId: string) {
+    router.push(`/workspaces/${workspaceId}?pipelineId=${pipelineId}`);
+  }
+
+  // Canonicalise the URL once the default pipeline is known.
   useEffect(() => {
     if (!pipelineIdFromUrl && chosenPipelineId) {
       router.replace(`/workspaces/${workspaceId}?pipelineId=${chosenPipelineId}`);
     }
   }, [pipelineIdFromUrl, chosenPipelineId, router, workspaceId]);
 
-  useEffect(() => {
-    if (!newStageId && sortedStages.length > 0) setNewStageId(sortedStages[0].id);
-  }, [newStageId, sortedStages]);
+  // --- board region ---
+  const boardLoading = stagesQ.isLoading || appsQ.isLoading;
+  const boardError = stagesQ.isError || appsQ.isError;
+  const boardReady = Boolean(pipeline) && !boardLoading && !boardError && stages.length > 0;
 
-  // -------------------------
-  // GUARDS (AFTER ALL HOOKS)
-  // -------------------------
+  let content: React.ReactNode;
   if (pipelinesQ.isLoading) {
-    return <div className="min-h-screen bg-white p-6">Loading pipelines...</div>;
-  }
-
-  if (pipelinesQ.isError) {
-    return (
-      <div className="min-h-screen bg-white p-6">
-        <div className="font-medium text-red-600">Failed to load pipelines</div>
-        <pre className="mt-2 text-xs whitespace-pre-wrap">
-          {JSON.stringify(pipelinesQ.error, null, 2)}
-        </pre>
-      </div>
+    content = <BoardSkeleton />;
+  } else if (pipelinesQ.isError) {
+    content = (
+      <BoardErrorState
+        message={getErrorMessage(pipelinesQ.error, "Check your connection and try again.")}
+        onRetry={() => pipelinesQ.refetch()}
+        retrying={pipelinesQ.isFetching}
+      />
+    );
+  } else if (pipelines.length === 0) {
+    content = <NoPipelinesState onCreatePipeline={() => showDialog("pipeline")} />;
+  } else if (pipelineMissing) {
+    content = (
+      <PipelineMissingState
+        defaultHref={defaultPipelineId ? `/workspaces/${workspaceId}?pipelineId=${defaultPipelineId}` : null}
+      />
+    );
+  } else if (boardLoading) {
+    content = <BoardSkeleton />;
+  } else if (boardError) {
+    content = (
+      <BoardErrorState
+        message={getErrorMessage(stagesQ.error ?? appsQ.error, "Check your connection and try again.")}
+        onRetry={() => {
+          if (stagesQ.isError) stagesQ.refetch();
+          if (appsQ.isError) appsQ.refetch();
+        }}
+        retrying={stagesQ.isFetching || appsQ.isFetching}
+      />
+    );
+  } else if (stages.length === 0) {
+    content = <NoStagesState onCreatePipeline={() => showDialog("pipeline")} />;
+  } else {
+    content = (
+      <Board
+        key={activePipelineId}
+        stages={stages}
+        applications={applications}
+        workspaceId={workspaceId}
+        pipelineId={activePipelineId}
+        visibleIds={filters.visibleIds}
+        selectedId={sheetOpen ? selectedId : null}
+        onOpenApplication={openApplication}
+      />
     );
   }
 
-  const pipelines = pipelinesQ.data ?? [];
-
-  async function submitCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newCompany.trim() || !newRole.trim() || !newStageId) return;
-
-    await createM.mutateAsync({
-      stageId: newStageId,
-      company: newCompany.trim(),
-      role: newRole.trim(),
-    });
-
-    setNewCompany("");
-    setNewRole("");
-  }
-
-  function openEdit(app: Application) {
-    setEditing(app);
-    setEditCompany(app.company ?? "");
-    setEditRole(app.role ?? "");
-  }
-
-  function closeEdit() {
-    setEditing(null);
-  }
-
-  async function saveEdit() {
-    if (!editing) return;
-
-    await updateM.mutateAsync({
-      id: editing.id,
-      data: {
-        company: editCompany.trim(),
-        role: editRole.trim(),
-      },
-    });
-
-    closeEdit();
-  }
-
-  async function deleteEditing() {
-    if (!editing) return;
-    if (!confirm("Delete this application?")) return;
-
-    await deleteM.mutateAsync(editing.id);
-    closeEdit();
-  }
-
-  function openDrawer(app: Application) {
-    setSelectedApp(app);
-    setDrawerOpen(true);
-  }
-
-  function closeDrawer() {
-    setDrawerOpen(false);
-  }
-
   return (
-    <div className="min-h-screen bg-white p-6 space-y-5">
-      {/* Header */}
-      <div className="flex gap-2 items-center">
-        <h1 className="text-xl font-semibold">Board</h1>
+    <div className="flex h-full min-h-[34rem] flex-col">
+      <BoardHeader
+        workspaceName={workspaceName}
+        pipelines={pipelines}
+        pipeline={pipeline}
+        loading={pipelinesQ.isLoading}
+        onPipelineChange={goToPipeline}
+        totalCount={boardReady ? applications.length : null}
+        filters={filters}
+        boardReady={boardReady}
+        onAddApplication={() => showDialog("application")}
+        onCreatePipeline={() => showDialog("pipeline")}
+      />
 
-        <select
-          className="border p-2"
-          value={chosenPipelineId}
-          onChange={(e) =>
-            router.push(`/workspaces/${workspaceId}?pipelineId=${e.target.value}`)
-          }
-          disabled={pipelines.length === 0}
-        >
-          {pipelines.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+      <div className="min-h-0 flex-1">{content}</div>
 
-        <button
-          className="border p-2"
-          type="button"
-          onClick={() => setCreatePipelineOpen(true)}
-        >
-          + Pipeline
-        </button>
-      </div>
+      <ApplicationSheet
+        open={sheetOpen && selectedApplication !== null}
+        application={selectedApplication}
+        stages={stages}
+        onClose={() => setSheetOpen(false)}
+      />
 
-      {/* If no pipelines, just prompt user to create one */}
-      {pipelines.length === 0 ? (
-        <div className="border p-4">
-          <div className="font-medium">No pipelines found</div>
-          <div className="text-sm opacity-70 mt-1">
-            Create a pipeline to start tracking applications.
-          </div>
-          <button
-            className="mt-3 border p-2"
-            type="button"
-            onClick={() => setCreatePipelineOpen(true)}
-          >
-            Create pipeline
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Create application (minimal) */}
-          <form className="border p-3 space-y-2" onSubmit={submitCreate}>
-            <div className="font-medium">Add application</div>
-
-            <div className="flex flex-wrap gap-2">
-              <input
-                className="border p-2"
-                placeholder="Company"
-                value={newCompany}
-                onChange={(e) => setNewCompany(e.target.value)}
-              />
-
-              <input
-                className="border p-2"
-                placeholder="Role"
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-              />
-
-              <select
-                className="border p-2"
-                value={newStageId}
-                onChange={(e) => setNewStageId(e.target.value)}
-              >
-                {sortedStages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-
-              <button className="border p-2" type="submit" disabled={createM.isPending}>
-                {createM.isPending ? "Creating..." : "Create"}
-              </button>
-            </div>
-
-            {(createM.error as any)?.message && (
-              <div className="text-sm text-red-600">
-                {(createM.error as any).message}
-              </div>
-            )}
-          </form>
-
-          <Board
-            stages={sortedStages}
-            applications={sortedApps}
-            loading={stagesQ.isLoading || appsQ.isLoading}
-            workspaceId={workspaceId}
-            pipelineId={chosenPipelineId}
-            onCardClick={openDrawer}
-          />
-
-          {/* Minimal edit panel (ugly by design) */}
-          {editing && (
-            <div className="border p-3 space-y-2">
-              <div className="font-medium">Edit application</div>
-
-              <input
-                className="border p-2 w-full"
-                value={editCompany}
-                onChange={(e) => setEditCompany(e.target.value)}
-                placeholder="Company"
-              />
-              <input
-                className="border p-2 w-full"
-                value={editRole}
-                onChange={(e) => setEditRole(e.target.value)}
-                placeholder="Role"
-              />
-
-              <div className="flex gap-2">
-                <button
-                  className="border p-2"
-                  onClick={saveEdit}
-                  disabled={updateM.isPending}
-                  type="button"
-                >
-                  {updateM.isPending ? "Saving..." : "Save"}
-                </button>
-
-                <button className="border p-2" onClick={closeEdit} type="button">
-                  Close
-                </button>
-
-                <button
-                  className="border p-2"
-                  onClick={deleteEditing}
-                  disabled={deleteM.isPending}
-                  type="button"
-                >
-                  {deleteM.isPending ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-
-              {(updateM.error as any)?.message && (
-                <div className="text-sm text-red-600">
-                  {(updateM.error as any).message}
-                </div>
-              )}
-              {(deleteM.error as any)?.message && (
-                <div className="text-sm text-red-600">
-                  {(deleteM.error as any).message}
-                </div>
-              )}
-            </div>
-          )}
-        </>
+      {boardReady && (
+        <CreateApplicationDialog
+          key={`application-${dialogKey}`}
+          open={openDialog === "application"}
+          onClose={() => setOpenDialog(null)}
+          workspaceId={workspaceId}
+          pipelineId={activePipelineId}
+          stages={stages}
+        />
       )}
 
-      <ApplicationDrawer application={selectedApp} open={drawerOpen} onClose={closeDrawer} />
-
-      {/* Create pipeline modal */}
-      <Modal
-        open={createPipelineOpen}
-        onClose={() => setCreatePipelineOpen(false)}
-        ariaLabel="Create pipeline"
-      >
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <div className="text-lg font-semibold">Create pipeline</div>
-            <div className="text-sm opacity-70">
-              Pipelines contain stages and applications.
-            </div>
-          </div>
-
-          <CreatePipelineForm
-            workspaceId={workspaceId}
-            onCancel={() => setCreatePipelineOpen(false)}
-            onCreated={(pipelineId) => {
-              setCreatePipelineOpen(false);
-              router.push(`/workspaces/${workspaceId}?pipelineId=${pipelineId}`);
-            }}
-          />
-        </div>
-      </Modal>
+      <CreatePipelineDialog
+        key={`pipeline-${dialogKey}`}
+        open={openDialog === "pipeline"}
+        onClose={() => setOpenDialog(null)}
+        workspaceId={workspaceId}
+        onCreated={(pipelineId) => {
+          setOpenDialog(null);
+          goToPipeline(pipelineId);
+        }}
+      />
     </div>
   );
 }

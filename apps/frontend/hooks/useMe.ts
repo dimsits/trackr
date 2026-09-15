@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Me = { id: string; email: string; name: string; createdAt: string };
+import type { Me } from "@/types";
 
 export function useMe() {
   return useQuery({

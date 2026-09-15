@@ -2,143 +2,48 @@
 
 ```
 frontend/
-├── .env.local
-├── .next/
-├── .gitignore (implied)
-├── app/
-│   ├── favicon.ico
-│   ├── globals.css
-│   ├── layout.tsx
-│   ├── page.tsx
-│   ├── providers.tsx
-│   ├── (app)/
-│   │   ├── layout.tsx
-│   │   └── workspaces/
-│   │       ├── page.tsx
-│   │       └── [workspaceId]/
-│   │           └── page.tsx
-│   └── (auth)/
-│       └── login/
-│           └── page.tsx
+├── app/                              # Routes only: orchestration and composition
+│   ├── globals.css                   # Calm Momentum design tokens (@theme) and base styles
+│   ├── layout.tsx                    # Root layout, Manrope font, metadata
+│   ├── page.tsx                      # Landing page
+│   ├── providers.tsx                 # React Query + Framer Motion (reduced-motion aware)
+│   ├── (auth)/
+│   │   ├── layout.tsx                # Shared auth frame
+│   │   ├── login/                    # page.tsx + LoginClient.tsx
+│   │   └── register/                 # page.tsx + RegisterClient.tsx
+│   └── (app)/
+│       ├── layout.tsx                # AuthGate + AppShell
+│       └── workspaces/
+│           ├── page.tsx              # Workspace chooser
+│           └── [workspaceId]/page.tsx  # Board route: queries, URL state, feature composition
 ├── components/
-│   ├── AuthGate.tsx
-│   ├── application/
-│   │   ├── ActivitiesSection.tsx
-│   │   ├── ApplicationDrawer.tsx
-│   │   ├── DrawerSection.tsx
-│   │   ├── DrawerShell.tsx
-│   │   ├── EditApplication.tsx
-│   │   ├── FileSection.tsx
-│   │   ├── SectionBoundary.tsx
-│   │   └── TasksSection.tsx
-│   └── board/
-│       ├── Board.tsx
-│       ├── Card.tsx
-│       ├── Column.tsx
-│       └── types.ts
-├── hooks/
-│   ├── useActivities.ts
-│   ├── useApplications.ts
-│   ├── useCreateActivity.ts
-│   ├── useCreateApplication.ts
-│   ├── useCreateTask.ts
-# Frontend File Structure
-
-```
-frontend/
-├── app/
-│   ├── favicon.ico
-│   ├── globals.css
-│   ├── layout.tsx
-│   ├── page.tsx
-│   ├── providers.tsx
-│   ├── (app)/
-│   │   ├── layout.tsx
-│   │   └── workspaces/
-│   │       ├── page.tsx
-│   │       └── [workspaceId]/
-│   │           └── page.tsx
-│   └── (auth)/
-│       ├── login/
-│       │   └── page.tsx
-│       └── register/
-│           └── page.tsx
-├── components/
-│   ├── AuthGate.tsx
-│   ├── Navbar.tsx
-│   ├── ui/
-│   │   └── Modal.tsx
-│   ├── application/
-│   │   ├── ActivitiesSection.tsx
-│   │   ├── ApplicationDrawer.tsx
-│   │   ├── DrawerSection.tsx
-│   │   ├── DrawerShell.tsx
-│   │   ├── EditApplication.tsx
-│   │   ├── FileSection.tsx
-+│   │   ├── SectionBoundary.tsx
-│   │   └── TasksSection.tsx
-│   └── board/
-│       ├── Board.tsx
-│       ├── Card.tsx
-│       ├── Column.tsx
-│       └── types.ts
-├── hooks/
-│   ├── useActivities.ts
-│   ├── useApplications.ts
-│   ├── useCreateActivity.ts
-│   ├── useCreateApplication.ts
-│   ├── useCreatePipeline.ts
-│   ├── useCreateTask.ts
-│   ├── useCreateWorkspace.ts
-│   ├── useDeleteApplication.ts
-│   ├── useDownloadFile.ts
-│   ├── useFiles.ts
-│   ├── useMe.ts
-│   ├── useMoveApplication.ts
-│   ├── usePipelines.ts
-│   ├── useRegister.ts
-│   ├── useStages.ts
-│   ├── useTasks.ts
-│   ├── useUpdateApplication.ts
-│   ├── useUpdateTask.ts
-│   ├── useUploadFile.ts
-│   ├── useWorkspaces.ts
-│   └── useLogout.ts
-├── lib/
-│   ├── api.ts
-│   ├── auth.ts
-│   └── queryClient.ts
-├── public/
-│   ├── file.svg
-│   ├── globe.svg
-│   ├── next.svg
-│   └── window.svg
-├── dev-pipeline.MD
-├── eslint.config.mjs
-├── next-env.d.ts
-├── next.config.ts
-├── package-lock.json
-├── package.json
-├── postcss.config.mjs
-├── tailwind.config.ts
-└── tsconfig.json
+│   ├── brand/Logo.tsx                # Wordmark and mark
+│   ├── shell/                        # AppShell, AppHeader, AccountMenu, AuthGate
+│   └── ui/                           # Primitives: Button, IconButton, Field (Input/Select/Textarea),
+│                                     # Checkbox, Badge, Alert, Dialog, Sheet, Overlay, Menu, Tabs,
+│                                     # Skeleton, Spinner, EmptyState, Monogram
+├── features/
+│   ├── auth/                         # AuthLayout, PasswordInput
+│   ├── landing/                      # Header, product preview, proof sections, footer, sample data
+│   ├── workspaces/                   # WorkspacesView, WorkspaceCard, CreateWorkspaceDialog
+│   ├── workspace-board/              # BoardHeader (command bar), board states, create dialogs, useBoardFilters
+│   ├── board/                        # Board, BoardColumn, ApplicationCard(+Content), PriorityBadge,
+│   │                                 # useBoardDnd (drag controller), ordering.ts (pure move logic), stageColors
+│   └── application-details/          # ApplicationSheet, summary, edit form, delete, activity/tasks/files sections
+├── hooks/                            # One React Query hook per endpoint (query keys and invalidation live here)
+├── lib/                              # api client, auth token storage, config, query client, cn, format, errors
+└── types/                            # Domain types matching the API responses
 ```
 
-## Key Directories
+## Conventions
 
-- **app/**: Next.js app directory with route groups and pages
-  - **(app)/**: Protected application routes (workspace-specific pages)
-  - **(auth)/**: Authentication routes (login, register)
-- **components/**: Reusable React components
-  - **ui/**: Generic UI components (e.g., `Modal`)
-  - **application/**: Application-related composite components and drawers
-  - **board/**: Kanban board components
-- **hooks/**: Custom React hooks for API calls and state management (one hook per feature)
-- **lib/**: API client, auth helpers, and shared utilities (`api.ts`, `auth.ts`, `queryClient.ts`)
-- **public/**: Static assets (SVGs, images)
-
-This file represents the current frontend layout as of the scan. If you want, I can also:
-
-- Add short descriptions for each component/hook.
-- Generate a graphical tree or JSON manifest for automation.
-- Commit these changes to git.
+- **Routes stay thin.** `app/` files wire route params and queries to feature components.
+- **Styling uses semantic tokens** defined in `app/globals.css` (`bg-surface`, `text-text-muted`,
+  `border-border`, `rounded-card`, `shadow-raised`, ...). The default Tailwind palette is intentionally
+  cleared, so raw colour utilities do not exist.
+- **Primitives do not merge conflicting classes.** Pass layout classes (width, margin) through
+  `className`; use a variant or prop for colour, size or radius changes.
+- **Overlays** (`Dialog`, `Sheet`) share `components/ui/Overlay.tsx` for focus trapping, focus
+  restoration, Escape handling, scroll locking and stacking.
+- **Board ordering** is owned by `features/board/useBoardDnd.ts`. It renders `optimistic ?? applications`
+  and clears the optimistic list once the move mutation has refetched server truth.

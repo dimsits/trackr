@@ -1,20 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Application = {
-  id: string;
-  company: string;
-  role: string;
-  stageId: string;
-  position: number;
-  location: string;
-  source: string;
-  link: string;
-  compMin: number;
-  compMax: number;
-  priority?: "LOW" | "MEDIUM" | "HIGH";
-  status?: "ACTIVE" | "ARCHIVED";
-};
+import type { Application } from "@/types";
 
 export function useApplications(workspaceId: string, pipelineId: string) {
   return useQuery({

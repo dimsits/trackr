@@ -1,12 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Task = {
-  id: string;
-  title: string;
-  status: "OPEN" | "DONE";
-  dueAt?: string | null;
-};
+import type { Task } from "@/types";
 
 export function useTasks(applicationId: string | null) {
   return useQuery({

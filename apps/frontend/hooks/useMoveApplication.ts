@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-// Uses PATCH /api/applications/{id} with stageId + position. :contentReference[oaicite:4]{index=4}
+// Uses PATCH /applications/{id} with stageId + position.
 export function useMoveApplication(workspaceId: string, pipelineId: string) {
   const qc = useQueryClient();
 

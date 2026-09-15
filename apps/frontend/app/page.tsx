@@ -1,191 +1,146 @@
+import { ArrowRight, Route, UserRound, Zap } from "lucide-react";
 import Link from "next/link";
+import { buttonStyles } from "@/components/ui/Button";
+import LandingFooter from "@/features/landing/LandingFooter";
+import LandingHeader from "@/features/landing/LandingHeader";
+import ProductPreview from "@/features/landing/ProductPreview";
+import ProofSections from "@/features/landing/ProofSections";
+
+const principles = [
+  {
+    icon: <Zap />,
+    title: "Quick to update",
+    body: "Adding an application takes a few fields. Moving it forward is one drag.",
+  },
+  {
+    icon: <UserRound />,
+    title: "Personal-first",
+    body: "Made for one person's search. No deals, quotas, seats or sales vocabulary.",
+  },
+  {
+    icon: <Route />,
+    title: "Opinionated, not rigid",
+    body: "Sensible stages to start with, and room to shape pipelines around how you work.",
+  },
+];
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-white text-black">
-      {/* Header */}
-      <header className="border-b">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div className="text-lg font-semibold">Trackr</div>
-          <div className="flex gap-3">
-            <Link
-              href="/login"
-              className="rounded-lg px-4 py-2 text-sm hover:bg-zinc-100"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-lg bg-black px-4 py-2 text-sm text-white hover:bg-zinc-800"
-            >
-              Get started
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-dvh bg-canvas">
+      <LandingHeader />
 
-      {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid gap-12 md:grid-cols-2 md:items-center">
-          <div className="space-y-6">
-            <span className="inline-block rounded-full border px-3 py-1 text-xs">
-              Job & OJT application tracker
-            </span>
-
-            <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
-              Track every application in one clean pipeline.
-            </h1>
-
-            <p className="max-w-xl text-base text-zinc-600 md:text-lg">
-              Trackr helps you manage job or OJT applications with a simple
-              Kanban-style board. Stages, notes, tasks, and files — no CRM bloat.
-            </p>
-
-            <div className="flex gap-3">
-              <Link
-                href="/register"
-                className="rounded-xl bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+      <main>
+        {/* Hero */}
+        <section
+          aria-labelledby="hero-heading"
+          className="relative overflow-hidden bg-[radial-gradient(70%_60%_at_50%_0%,var(--color-brand-soft)_0%,transparent_70%)]"
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(40%_45%_at_85%_10%,var(--color-attention-soft)_0%,transparent_70%)] opacity-70"
+          />
+          <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-text-muted shadow-xs">
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-brand" />
+                For job and OJT applications
+              </p>
+              <h1
+                id="hero-heading"
+                className="mt-6 text-balance text-4xl font-extrabold leading-[1.08] tracking-[-0.03em] text-text sm:text-5xl lg:text-[64px]"
               >
-                Create account
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-xl border px-6 py-3 text-sm font-medium hover:bg-zinc-100"
-              >
-                I already have an account
-              </Link>
+                Every application, in one calm pipeline.
+              </h1>
+              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-7 text-text-muted sm:text-lg sm:leading-8">
+                Trackr turns a scattered search into a board you can read at a glance. Move applications through
+                stages, and keep notes, follow-ups and files beside each one.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link href="/register" className={buttonStyles({ size: "lg", className: "w-full sm:w-auto" })}>
+                  Start tracking
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+                <Link href="/login" className={buttonStyles({ variant: "secondary", size: "lg", className: "w-full sm:w-auto" })}>
+                  Sign in
+                </Link>
+              </div>
+              <p className="mt-5 text-[13px] font-medium text-text-muted">Personal-first · No CRM clutter · Works on your phone</p>
+            </div>
+
+            <div className="mt-14 sm:mt-16">
+              <ProductPreview />
             </div>
           </div>
+        </section>
 
-          {/* Preview */}
-          <div className="rounded-3xl border bg-zinc-50 p-4">
-            <div className="rounded-2xl border bg-white p-4">
-              <div className="mb-4 flex justify-between">
-                <div>
-                  <div className="text-sm font-semibold">
-                    Personal Workspace
-                  </div>
-                  <div className="text-xs text-zinc-500">
-                    Default pipeline
-                  </div>
-                </div>
-                <div className="text-xs text-zinc-500">Today</div>
-              </div>
+        {/* Product proof */}
+        <section id="how-it-works" aria-labelledby="how-heading" className="scroll-mt-20 border-t border-border bg-surface">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+            <div className="max-w-2xl">
+              <p className="text-[13px] font-bold text-brand">How it works</p>
+              <h2 id="how-heading" className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-text sm:text-4xl">
+                Everything a search needs. Nothing a sales team does.
+              </h2>
+              <p className="mt-4 text-[15px] leading-7 text-text-muted sm:text-base">
+                Trackr keeps the whole picture in four places you will actually use.
+              </p>
+            </div>
+            <div className="mt-16 sm:mt-20">
+              <ProofSections />
+            </div>
+          </div>
+        </section>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                {["Interested", "Applied", "Interview"].map((stage) => (
-                  <div
-                    key={stage}
-                    className="rounded-2xl border bg-zinc-50 p-3"
+        {/* Principles */}
+        <section id="principles" aria-labelledby="principles-heading" className="scroll-mt-20 border-t border-border">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <h2 id="principles-heading" className="max-w-xl text-2xl font-extrabold tracking-tight text-text sm:text-3xl">
+              Designed to stay out of your way
+            </h2>
+            <ul className="mt-10 grid gap-4 md:grid-cols-3">
+              {principles.map((principle) => (
+                <li key={principle.title} className="rounded-card border border-border bg-surface p-6 shadow-card">
+                  <span
+                    aria-hidden="true"
+                    className="flex size-10 items-center justify-center rounded-card bg-brand-soft text-brand [&_svg]:size-5"
                   >
-                    <div className="mb-2 flex justify-between text-xs font-semibold">
-                      <span>{stage}</span>
-                      <span className="text-zinc-500">2</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="rounded-xl border bg-white p-2">
-                        <div className="text-xs font-medium">ACME Corp</div>
-                        <div className="text-xs text-zinc-500">
-                          Software Intern
-                        </div>
-                      </div>
-                      <div className="rounded-xl border bg-white p-2">
-                        <div className="text-xs font-medium">Nimbus</div>
-                        <div className="text-xs text-zinc-500">
-                          Frontend Dev
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 text-xs text-zinc-500">
-                Preview only
-              </div>
-            </div>
+                    {principle.icon}
+                  </span>
+                  <h3 className="mt-4 text-base font-bold text-text">{principle.title}</h3>
+                  <p className="mt-1.5 text-sm leading-6 text-text-muted">{principle.body}</p>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features */}
-      <section className="border-t">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="mb-8 text-2xl font-semibold">
-            Built for focus, not clutter
-          </h2>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ["Visual pipeline", "Move applications across stages easily."],
-              ["Notes & activity log", "Keep interview context attached."],
-              ["Tasks & reminders", "Never miss a follow-up."],
-              ["File attachments", "Resumes and screenshots per application."],
-              ["Fast & lightweight", "No unnecessary CRM features."],
-              ["Personal-first", "Designed for individual workflows."],
-            ].map(([title, desc]) => (
-              <div
-                key={title}
-                className="rounded-2xl border bg-white p-5"
-              >
-                <div className="mb-1 text-sm font-semibold">{title}</div>
-                <div className="text-sm text-zinc-600">{desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="border-t">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <div className="rounded-3xl border bg-zinc-50 p-8">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h3 className="text-2xl font-semibold">
-                  Ready to get organized?
-                </h3>
-                <p className="mt-2 text-sm text-zinc-600">
-                  Create your workspace and start tracking applications today.
+        {/* Final CTA */}
+        <section aria-labelledby="cta-heading" className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+          <div className="overflow-hidden rounded-panel bg-brand-ink px-6 py-12 text-on-brand sm:px-12 sm:py-16">
+            <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-xl">
+                <h2 id="cta-heading" className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+                  Give your search a calmer shape.
+                </h2>
+                <p className="mt-3 text-[15px] leading-7 text-on-brand/80">
+                  Create a workspace, pick your stages, and add the applications already on your mind.
                 </p>
               </div>
-
-              <div className="flex gap-3">
-                <Link
-                  href="/register"
-                  className="rounded-xl bg-black px-6 py-3 text-sm font-medium text-white hover:bg-zinc-800"
-                >
-                  Create account
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link href="/register" className={buttonStyles({ variant: "inverse", size: "lg" })}>
+                  Create your account
+                  <ArrowRight aria-hidden="true" />
                 </Link>
-                <Link
-                  href="/login"
-                  className="rounded-xl border px-6 py-3 text-sm font-medium hover:bg-zinc-100"
-                >
+                <Link href="/login" className={buttonStyles({ variant: "inverse-ghost", size: "lg" })}>
                   Sign in
                 </Link>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 sm:flex-row sm:justify-between">
-          <span className="text-sm text-zinc-500">
-            © {new Date().getFullYear()} Trackr
-          </span>
-          <div className="flex gap-4 text-sm text-zinc-500">
-            <Link href="/login" className="hover:text-black">
-              Sign in
-            </Link>
-            <Link href="/register" className="hover:text-black">
-              Create account
-            </Link>
-          </div>
-        </div>
-      </footer>
-    </main>
+      <LandingFooter />
+    </div>
   );
 }

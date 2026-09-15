@@ -2,11 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { WorkspaceListItem } from "./useCreateWorkspace";
+import type { Workspace } from "@/types";
 
 export function useWorkspaces() {
   return useQuery({
     queryKey: ["workspaces"],
-    queryFn: () => api<WorkspaceListItem[]>("/workspaces"),
+    queryFn: () => api<Workspace[]>("/workspaces"),
   });
 }

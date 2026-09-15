@@ -13,7 +13,7 @@ trackr/
 │   └── dev-preflight.mjs      # runs before `npm run dev`
 ├── api-docu.md
 ├── apps/
-│   ├── frontend/
+│   ├── frontend/                # see apps/frontend/FRONTEND_STRUCTURE.md for details
 │   │   ├── FRONTEND_STRUCTURE.md
 │   │   ├── dev-pipeline.MD
 │   │   ├── eslint.config.mjs
@@ -22,77 +22,23 @@ trackr/
 │   │   ├── .env.example
 │   │   ├── package.json
 │   │   ├── postcss.config.mjs
-│   │   ├── tailwind.config.ts
 │   │   ├── tsconfig.json
 │   │   ├── public/
-│   │   │   ├── file.svg
-│   │   │   ├── globe.svg
-│   │   │   ├── next.svg
-│   │   │   └── window.svg
-│   │   ├── lib/
-│   │   │   ├── api.ts
-│   │   │   ├── auth.ts
-│   │   │   └── queryClient.ts
-│   │   ├── hooks/
-│   │   │   ├── useActivities.ts
-│   │   │   ├── useApplications.ts
-│   │   │   ├── useCreateActivity.ts
-│   │   │   ├── useCreateApplication.ts
-│   │   │   ├── useCreatePipeline.ts
-│   │   │   ├── useCreateTask.ts
-│   │   │   ├── useCreateWorkspace.ts
-│   │   │   ├── useDeleteApplication.ts
-│   │   │   ├── useDownloadFile.ts
-│   │   │   ├── useFiles.ts
-│   │   │   ├── useMe.ts
-│   │   │   ├── useMoveApplication.ts
-│   │   │   ├── usePipelines.ts
-│   │   │   ├── useRegister.ts
-│   │   │   ├── useStages.ts
-│   │   │   ├── useTasks.ts
-│   │   │   ├── useUpdateApplication.ts
-│   │   │   ├── useUpdateTask.ts
-│   │   │   ├── useUploadFile.ts
-│   │   │   ├── useWorkspaces.ts
-│   │   │   └── useLogout.ts
+│   │   ├── app/                 # routes: landing, (auth) login/register, (app) workspaces + board
 │   │   ├── components/
-│   │   │   ├── AuthGate.tsx
-│   │   │   ├── Navbar.tsx
-│   │   │   ├── forms/
-│   │   │   │   └── CreatePipelineForm.tsx
-│   │   │   ├── ui/
-│   │   │   │   └── Modal.tsx
+│   │   │   ├── brand/           # Logo
+│   │   │   ├── shell/           # AppShell, AppHeader, AccountMenu, AuthGate
+│   │   │   └── ui/              # design-system primitives (Button, Field, Dialog, Sheet, Menu, Tabs, ...)
+│   │   ├── features/
+│   │   │   ├── auth/
+│   │   │   ├── landing/
+│   │   │   ├── workspaces/
+│   │   │   ├── workspace-board/
 │   │   │   ├── board/
-│   │   │   │   ├── Board.tsx
-│   │   │   │   ├── Card.tsx
-│   │   │   │   ├── Column.tsx
-│   │   │   │   └── types.ts
-│   │   │   └── application/
-│   │   │       ├── ActivitiesSection.tsx
-│   │   │       ├── ApplicationDrawer.tsx
-│   │   │       ├── DrawerSection.tsx
-│   │   │       ├── DrawerShell.tsx
-│   │   │       ├── EditApplication.tsx
-│   │   │       ├── FileSection.tsx
-│   │   │       ├── SectionBoundary.tsx
-│   │   │       └── TasksSection.tsx
-│   │   └── app/
-│   │       ├── favicon.ico
-│   │       ├── globals.css
-│   │       ├── layout.tsx
-│   │       ├── page.tsx
-│   │       ├── providers.tsx
-│   │       ├── (auth)/
-│   │       │   ├── login/
-│   │       │   │   └── page.tsx
-│   │       │   └── register/
-│   │       │       └── page.tsx
-│   │       └── (app)/
-│   │           ├── layout.tsx
-│   │           └── workspaces/
-│   │               ├── page.tsx
-│   │               └── [workspaceId]/
-│   │                   └── page.tsx
+│   │   │   └── application-details/
+│   │   ├── hooks/               # React Query hooks, one per endpoint
+│   │   ├── lib/                 # api, auth, config, queryClient, cn, format, errors
+│   │   └── types/               # domain types matching API responses
 │   └── backend/
 │       ├── .gitignore
 │       ├── .prettierrc

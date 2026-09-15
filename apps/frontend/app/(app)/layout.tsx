@@ -1,5 +1,10 @@
-import AuthGate from "@/components/AuthGate";
-import Navbar from "@/components/Navbar";
+import type { Metadata } from "next";
+import AppShell from "@/components/shell/AppShell";
+import AuthGate from "@/components/shell/AuthGate";
+
+export const metadata: Metadata = {
+  title: "Workspaces",
+};
 
 export default function AppLayout({
   children,
@@ -8,12 +13,7 @@ export default function AppLayout({
 }) {
   return (
     <AuthGate>
-      <div className="h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 overflow-hidden">
-          {children}
-        </main>
-      </div>
+      <AppShell>{children}</AppShell>
     </AuthGate>
   );
 }

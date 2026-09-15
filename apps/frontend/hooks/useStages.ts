@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Stage = { id: string; name: string; color: string; position: number };
+import type { Stage } from "@/types";
 
 export function useStages(pipelineId: string) {
   return useQuery({
