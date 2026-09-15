@@ -66,10 +66,10 @@ console.log(dim(`repository root: ${root}`));
 
 step('Checking Node.js');
 
-const requiredNode = manifest.engines?.node ?? '>=20.11.0';
+const requiredNode = manifest.engines?.node ?? '^20.19.0 || >=22.12.0';
 if (!satisfiesMinimum(process.versions.node, requiredNode)) {
   fail(
-    `Node.js ${process.versions.node} is too old (this repository requires ${requiredNode}).`,
+    `Node.js ${process.versions.node} is not supported (this repository requires ${requiredNode}).`,
     'Install a supported release from https://nodejs.org/ or via nvm / fnm / volta.',
   );
 }

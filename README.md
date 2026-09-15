@@ -39,7 +39,8 @@ Seeded development login: **seed@trackr.dev** / **password123**
 | Tool | Version | Notes |
 | --- | --- | --- |
 | Git | any recent | to clone the repository |
-| Node.js | **>= 20.11.0** | `setup` refuses to run on older releases |
+| Node.js | **^20.19.0 \|\| >= 22.12.0** | required by NestJS 12; `setup` refuses to run on unsupported releases |
+| Node.js (to run `npm test`) | **>= 24.9.0** | NestJS 12 packages are ESM-only and Jest can only `require()` ESM on Node 24.9+ |
 | npm | **>= 10** | ships with Node.js; workspaces are required |
 | Docker Desktop | any recent | must be **running** - it hosts PostgreSQL |
 
@@ -94,6 +95,17 @@ health-probe URL from that single value, so the two can never drift apart.
 
 `npm run dev` applies migrations but deliberately **does not seed** on every
 start. Run `npm run db:seed` when you want the sample data refreshed.
+
+#### Running the backend test suite
+
+The NestJS 12 packages ship as ESM-only. Jest can only `require()` ESM on
+**Node.js 24.9 or newer**, so `npm test` and `npm run test:e2e` must be run on
+such a release; the scripts already pass `--experimental-vm-modules`, which Jest
+needs to enable that path. On an older (but still supported) runtime such as
+Node 22.12 the application builds and runs normally, but every backend suite
+fails to load with `Must use import to load ES Module`. CI pins Node 24 for this
+reason. See the "Jest" note in the
+[NestJS v12 migration guide](https://docs.nestjs.com/migration-guide).
 
 To target one workspace directly, use npm's workspace flag rather than `cd`:
 

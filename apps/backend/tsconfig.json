@@ -1,12 +1,18 @@
 {
   "compilerOptions": {
-    /* Runtime + module system (NestJS default) */
-    "module": "commonjs",
-    "moduleResolution": "node",
+    /* Runtime + module system.
+       NestJS 12 core packages ship as ESM-only, which the legacy "node"
+       resolver cannot resolve. "nodenext" reads each package's "exports"
+       map instead. Emitted code stays CommonJS because this package.json
+       has no "type": "module", so dist/ and the Jest/ts-jest setup are
+       unchanged. */
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
 
     /* Language target */
-    "target": "ES2021",
-    "lib": ["ES2021"],
+    "target": "ES2023",
+    "lib": ["ES2023"],
 
     /* Output */
     "outDir": "./dist",

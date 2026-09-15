@@ -167,15 +167,35 @@ function compareVersions(a, b) {
   return 0;
 }
 
-/** Reads the minimum version out of an engines range such as ">=20.11.0". */
+/** Reads the minimum version out of a single clause such as ">=20.11.0". */
 export function minimumFromRange(range) {
   return parseVersion(range) ?? { major: 0, minor: 0, patch: 0 };
 }
 
+/**
+ * Tests a version against an npm-style engines range.
+ *
+ * Supports the subset this repository declares: "||"-separated clauses using
+ * ">=", "^", or a bare version. A caret clause is capped at its own major, so
+ * "^20.19.0 || >=22.12.0" accepts Node 20.19+ and 22.12+ while correctly
+ * rejecting 21.x and 22.0-22.11 - the lines NestJS 12 does not support.
+ */
 export function satisfiesMinimum(actualText, range) {
   const actual = parseVersion(actualText);
   if (!actual) return false;
-  return compareVersions(actual, minimumFromRange(range)) >= 0;
+
+  const clauses = String(range ?? '')
+    .split('||')
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+  if (clauses.length === 0) return true;
+
+  return clauses.some((clause) => {
+    const min = parseVersion(clause);
+    if (!min) return false;
+    if (compareVersions(actual, min) < 0) return false;
+    return clause.startsWith('^') ? actual.major === min.major : true;
+  });
 }
 
 // ---------------------------------------------------------------------------

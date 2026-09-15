@@ -62,7 +62,7 @@ trackr/
 ## 3. Technology Stack
 
 ### Backend (NestJS)
-- **Framework**: NestJS 11.x (Node.js)
+- **Framework**: NestJS 12.x (Node.js)
 - **Language**: TypeScript 5.7.x
 - **Database**: PostgreSQL 16
 - **ORM**: Prisma 7.3.x
@@ -478,7 +478,8 @@ See the Quick start section of `README.md` for the full walkthrough.
 ### Prerequisites
 
 - Git
-- Node.js >= 20.11.0
+- Node.js ^20.19.0 || >= 22.12.0 (required by NestJS 12; the 21.x and 22.0-22.11 lines are not supported)
+- Node.js >= 24.9.0 to run the backend Jest suites (NestJS 12 is ESM-only; Jest can only `require()` ESM on 24.9+)
 - npm >= 10 (workspaces)
 - Docker Desktop, running
 
