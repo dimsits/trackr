@@ -175,6 +175,99 @@ Run `npm install` once to refresh the root `package-lock.json`, then commit it.
 
 ---
 
+## 1b) Production deployment
+
+There is no hosted environment yet. What exists is a reproducible production
+**artifact** for the API and the exact commands to build, migrate and run it.
+Everything below is run from the **repository root**, because the single
+authoritative `package-lock.json` lives there.
+
+### Why the image is split
+
+`@prisma/client` declares `prisma` as an *optional peer dependency*, so
+`npm ci --omit=dev` installs the whole Prisma CLI anyway - and with it
+`@prisma/config` -> `deepmerge-ts`, `mysql2`, and the Studio UI tree. Trackr is
+PostgreSQL-only and reaches the database through `@prisma/adapter-pg`, so none
+of that serves a request; `mysql2` in particular is never used.
+
+`apps/backend/Dockerfile` therefore has three meaningful targets:
+
+| Target | Contains | Used for |
+| --- | --- | --- |
+| `builder` | full dependency tree, Prisma CLI, TypeScript | `prisma generate` + `tsc` |
+| `migrator` | the builder plus the Prisma CLI | running `prisma migrate deploy` as a deployment job |
+| `runtime` (default) | compiled `dist/`, production deps, generated Prisma client | serving traffic |
+
+The runtime stage is reduced to the backend's real runtime closure by
+`scripts/prune-runtime-deps.mjs` (dependencies + optionalDependencies +
+required peers, resolved from the committed lockfile - no version is
+re-resolved). It contains **no** `prisma`, `@prisma/config`, `deepmerge-ts` or
+`mysql2`, and the build fails if any of them reappear.
+
+### 1. Build the production image
+
+```bash
+docker build -f apps/backend/Dockerfile -t trackr-api:<tag> .
+```
+
+### 2. Apply migrations (explicit deployment step)
+
+Migrations are **never** applied while building an image. Build the migration
+target and run it against the database you are deploying to:
+
+```bash
+docker build -f apps/backend/Dockerfile --target migrator -t trackr-migrate:<tag> .
+docker run --rm -e DATABASE_URL="postgresql://user:pass@host:5432/db?schema=public"   trackr-migrate:<tag>
+```
+
+Equivalently, from a checkout: `npm run db:migrate --workspace @trackr/backend`.
+
+### 3. Run the API
+
+```bash
+docker run -d --name trackr-api   -p 127.0.0.1:3001:3001   -e DATABASE_URL="postgresql://user:pass@host:5432/db?schema=public"   -e JWT_SECRET="<32+ random bytes>"   -e CORS_ORIGIN="https://your-frontend.example"   trackr-api:<tag>
+```
+
+| Variable | Image default | Notes |
+| --- | --- | --- |
+| `HOST` | `0.0.0.0` | Outside a container the app defaults to `127.0.0.1`. A container has its own network namespace, so it must bind every interface to be reachable at all; what is actually exposed is decided by how you publish the port. |
+| `PORT` | `3001` | |
+| `DATABASE_URL` | unset | Required. |
+| `JWT_SECRET` | unset | Required. Never commit it. |
+| `CORS_ORIGIN` | `http://localhost:3000` | Comma-separated allow-list. |
+| `R2_*` | unset | All four or none; unset disables uploads with a `503`. |
+
+The container runs as the unprivileged `node` user and declares a
+`HEALTHCHECK` against `/api/health`. Publish the port to `127.0.0.1` unless a
+reverse proxy or platform load balancer terminates TLS in front of it.
+
+### 4. Audit the artifact you are about to ship
+
+```bash
+node scripts/audit-runtime-artifact.mjs trackr-api:<tag>
+```
+
+This reads the package list out of the built image, audits exactly that set,
+and exits non-zero on any high or critical advisory or if any build-only
+package leaked in. `npm audit --omit=dev` on a checkout is **not** the release
+gate - it reports the Prisma CLI chain that the image does not contain. Use
+`node scripts/audit-production-deps.mjs` for the checkout-level gate, which
+fails on anything outside that known chain.
+
+A base-image OS scan (Docker Scout, Trivy, Grype) is a separate, credentialed
+step and is not run by this repository's CI.
+
+### Continuous verification
+
+`.github/workflows/dependency-security.yml` runs on any change to a dependency
+manifest, the root lockfile, the Dockerfile or these scripts, and weekly. It
+does a clean `npm ci`, builds both apps, audits production dependencies, builds
+the real production image, proves the Prisma tooling is absent, audits the
+artifact, checks the image is non-root, then applies migrations and smoke-tests
+the running container against a throwaway PostgreSQL.
+
+---
+
 ## 2) High-level system
 
 ### Context

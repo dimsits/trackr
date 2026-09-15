@@ -1,0 +1,35 @@
+# Build context is the repository root. Keep it small and never ship secrets
+# or host-built native modules into an image.
+
+# Dependencies and build output are produced inside the image.
+node_modules
+**/node_modules
+apps/backend/dist
+apps/frontend/.next
+apps/frontend/out
+
+# Secrets and local environment files.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# VCS, tooling and editor noise.
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# Local-only infrastructure and docs.
+compose.yaml
+**/*.md
+coverage
+**/coverage
+*.log
+npm-debug.log*
+
+# The image never runs the test suites.
+apps/backend/test
+**/*.spec.ts

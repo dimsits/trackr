@@ -3,14 +3,21 @@
 ```
 trackr/
 ├── .gitignore
+├── .dockerignore              # build context for the backend image
 ├── README.md
 ├── package.json
 ├── package-lock.json          # the single, authoritative lockfile
 ├── compose.yaml               # local PostgreSQL
+├── .github/
+│   └── workflows/
+│       └── dependency-security.yml   # runs on any dependency/lockfile change
 ├── scripts/
 │   ├── lib.mjs                # shared helpers (Node built-ins only)
 │   ├── setup.mjs              # `npm run setup`
-│   └── dev-preflight.mjs      # runs before `npm run dev`
+│   ├── dev-preflight.mjs      # runs before `npm run dev`
+│   ├── prune-runtime-deps.mjs # reduces node_modules to the runtime closure
+│   ├── audit-production-deps.mjs    # checkout-level high/critical gate
+│   └── audit-runtime-artifact.mjs   # audits the built production image
 ├── api-docu.md
 ├── apps/
 │   ├── frontend/                # see apps/frontend/FRONTEND_STRUCTURE.md for details
@@ -41,6 +48,7 @@ trackr/
 │   │   └── types/               # domain types matching API responses
 │   └── backend/
 │       ├── .gitignore
+│       ├── Dockerfile         # multi-stage: builder / migrator / runtime
 │       ├── .prettierrc
 │       ├── backend-architecture.md
 │       ├── .env.example

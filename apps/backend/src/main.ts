@@ -47,13 +47,17 @@ async function bootstrap() {
 
   const prismaService = app.get(PrismaService);
 
-  // Local-only: bind to loopback so the API is never reachable off-machine.
+  // Binds to loopback by default, so a developer machine never exposes the API
+  // off-host. A container has its own network namespace and must publish on
+  // every interface to be reachable at all, so images set HOST=0.0.0.0.
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
-  await app.listen(port, '127.0.0.1');
+  const host = process.env.HOST?.trim() || '127.0.0.1';
+  await app.listen(port, host);
 
-  const base = `http://localhost:${port}${apiPrefix ? `/${apiPrefix}` : ''}`;
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+  const base = `http://${displayHost}:${port}${apiPrefix ? `/${apiPrefix}` : ''}`;
   Logger.log(`Trackr API listening on ${base}`, 'Bootstrap');
   Logger.log(`Health check at ${base}/health`, 'Bootstrap');
-  Logger.log(`Swagger UI at http://localhost:${port}/docs`, 'Bootstrap');
+  Logger.log(`Swagger UI at http://${displayHost}:${port}/docs`, 'Bootstrap');
 }
 bootstrap();

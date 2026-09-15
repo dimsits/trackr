@@ -1,0 +1,271 @@
+name: Dependency security
+
+# Runs whenever a dependency manifest or the single root lockfile changes, so a
+# dependency bump cannot reach the default branch without the production
+# artifact being rebuilt and audited.
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'apps/*/package.json'
+      - 'apps/backend/Dockerfile'
+      - '.dockerignore'
+      - 'scripts/prune-runtime-deps.mjs'
+      - 'scripts/audit-production-deps.mjs'
+      - 'scripts/audit-runtime-artifact.mjs'
+      - '.github/workflows/dependency-security.yml'
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'apps/*/package.json'
+      - 'apps/backend/Dockerfile'
+      - '.dockerignore'
+      - 'scripts/prune-runtime-deps.mjs'
+      - 'scripts/audit-production-deps.mjs'
+      - 'scripts/audit-runtime-artifact.mjs'
+      - '.github/workflows/dependency-security.yml'
+  # A clean lockfile can start failing because a new advisory was published,
+  # not because anything changed here.
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+# Least privilege: every job only reads the repository. Nothing here publishes
+# a package, pushes an image, or comments on a pull request.
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # NestJS 12 ships ESM-only packages; Jest can only require() ESM on Node
+  # 24.9+, so the suites need this line even though the app itself supports
+  # ^20.19.0 || >=22.12.0. See README "Running the backend test suite".
+  NODE_VERSION: '24.14.1'
+
+jobs:
+  build-and-test:
+    name: Build, lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # `npm ci` deletes node_modules and installs strictly from the committed
+      # lockfile; it fails outright if the lockfile and manifests disagree.
+      - name: Clean install from the root lockfile
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build --workspace @trackr/frontend
+
+      - name: Build backend
+        run: npm run build --workspace @trackr/backend
+
+      - name: Lint frontend
+        run: npm run lint --workspace @trackr/frontend
+
+      # The backend lint and test suites have failures that predate this
+      # workflow (Prettier/type-aware-parser findings, and scaffolding specs
+      # that never mocked PrismaService). They are recorded rather than
+      # suppressed: `continue-on-error` marks the step red without failing the
+      # job, so a regression is visible and nothing is hidden behind `|| true`.
+      # Tighten these to hard gates once the baseline is cleaned up.
+      - name: Lint backend (known-failing baseline)
+        id: backend-lint
+        continue-on-error: true
+        run: npm run lint --workspace @trackr/backend
+
+      - name: Test backend (known-failing baseline)
+        id: backend-test
+        continue-on-error: true
+        run: npm run test --workspace @trackr/backend
+
+      - name: Report backend baseline status
+        run: |
+          echo "backend lint: ${{ steps.backend-lint.outcome }}"
+          echo "backend test: ${{ steps.backend-test.outcome }}"
+
+  audit-production-dependencies:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Clean install from the root lockfile
+        run: npm ci
+
+      # Fails on any high/critical advisory other than the Prisma CLI chain
+      # that npm installs through an optional peer dependency. That exception
+      # is only sound because the runtime-artifact job below proves those
+      # packages are not in the deployed image - if they ever are, that job
+      # fails and the release is blocked.
+      - name: npm audit --omit=dev (high/critical gate)
+        run: node scripts/audit-production-deps.mjs
+
+  runtime-artifact:
+    name: Build and audit the production artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built from the repository root: the authoritative lockfile lives there.
+      # The image is only loaded into the local daemon - this workflow never
+      # pushes it anywhere.
+      - name: Build backend production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          target: runtime
+          tags: trackr-api:ci
+          push: false
+          load: true
+
+      # Independent of the assertion baked into the Dockerfile, so a change to
+      # the image cannot quietly drop that check.
+      - name: Prove build tooling is absent from the runtime image
+        run: |
+          set -euo pipefail
+          for pkg in prisma @prisma/config deepmerge-ts mysql2 \
+                     @prisma/engines @prisma/studio-core typescript react; do
+            if docker run --rm --entrypoint sh trackr-api:ci \
+                 -c "[ -e /app/node_modules/$pkg ]"; then
+              echo "FAIL: $pkg is present in the runtime image"
+              exit 1
+            fi
+            echo "absent: $pkg"
+          done
+          for pkg in @prisma/client @prisma/adapter-pg pg; do
+            if ! docker run --rm --entrypoint sh trackr-api:ci \
+                   -c "[ -e /app/node_modules/$pkg ]"; then
+              echo "FAIL: required runtime package $pkg is missing"
+              exit 1
+            fi
+            echo "present: $pkg"
+          done
+
+      # Audits the package set the image actually ships, and fails on any
+      # high or critical advisory. This is the authoritative production gate.
+      - name: Audit the runtime artifact (fails on high/critical)
+        run: node scripts/audit-runtime-artifact.mjs trackr-api:ci
+
+      - name: Confirm the image runs as a non-root user
+        run: |
+          set -euo pipefail
+          uid="$(docker run --rm --entrypoint id trackr-api:ci -u)"
+          echo "runtime uid: $uid"
+          if [ "$uid" = "0" ]; then
+            echo "FAIL: the runtime image must not run as root"
+            exit 1
+          fi
+
+  migrate-and-smoke:
+    name: Migrate and smoke-test the artifact
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: trackr_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d trackr_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/trackr_ci?schema=public
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      # The migration image carries the Prisma CLI; the runtime image does not.
+      - name: Build migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          target: migrator
+          tags: trackr-migrate:ci
+          push: false
+          load: true
+
+      - name: Build backend production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          target: runtime
+          tags: trackr-api:ci
+          push: false
+          load: true
+
+      # Migrations are an explicit deployment step, never part of image build.
+      - name: Apply migrations
+        run: |
+          docker run --rm --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            trackr-migrate:ci
+
+      - name: Start the runtime image and smoke-test it
+        run: |
+          set -euo pipefail
+          docker run -d --name trackr-api-ci --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e JWT_SECRET="$(openssl rand -hex 32)" \
+            -e PORT=3001 \
+            trackr-api:ci
+
+          for i in $(seq 1 60); do
+            if curl -fsS -m 3 http://127.0.0.1:3001/api/health > /dev/null; then
+              echo "health ok after ${i}s"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "FAIL: the API never became healthy"
+              docker logs trackr-api-ci
+              exit 1
+            fi
+            sleep 1
+          done
+
+          curl -fsS -m 10 http://127.0.0.1:3001/api/health
+          # Swagger must initialise, and a guarded route must reject anonymous
+          # callers rather than 500 or let them through.
+          curl -fsS -m 10 -o /dev/null http://127.0.0.1:3001/docs-json
+          code="$(curl -s -m 10 -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/api/me)"
+          if [ "$code" != "401" ]; then
+            echo "FAIL: guarded route returned $code, expected 401"
+            exit 1
+          fi
+          echo "smoke test passed"
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f trackr-api-ci
