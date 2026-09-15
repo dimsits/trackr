@@ -1,11 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Activity = {
-  id: string;
-  content: string;
-  createdAt: string;
-};
+import type { Activity } from "@/types";
 
 export function useActivities(applicationId: string | null) {
   return useQuery({

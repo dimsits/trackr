@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type Pipeline = { id: string; name: string; isDefault: boolean };
+import type { Pipeline } from "@/types";
 
 export function usePipelines(workspaceId: string) {
   return useQuery({

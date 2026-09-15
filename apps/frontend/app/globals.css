@@ -1,2 +1,138 @@
 @import "tailwindcss";
 
+/*
+ * Calm Momentum design tokens.
+ *
+ * The default Tailwind colour palette is cleared on purpose: components use
+ * semantic tokens (`bg-surface`, `text-text-muted`, `border-border`, ...) so the
+ * palette can evolve in one place. Contrast pairs noted below are WCAG ratios.
+ */
+@theme {
+  --color-*: initial;
+
+  /* Grounds */
+  --color-canvas: #f4f6f2;
+  --color-surface: #ffffff;
+  --color-surface-muted: #edf1ec;
+  --color-surface-sunken: #e6ebe5;
+  --color-scrim: rgb(24 33 27 / 0.38);
+
+  /* Text */
+  --color-text: #18211b; /* 15.2:1 on canvas */
+  --color-text-muted: #5f6a62; /* 5.6:1 on surface, 4.9:1 on surface-muted */
+  --color-text-subtle: #6b766e; /* 4.7:1 on surface; placeholders and tertiary text */
+  --color-on-brand: #ffffff;
+
+  /* Lines */
+  --color-border: #dce3db;
+  --color-border-strong: #b9c3b8;
+
+  /* Brand: evergreen */
+  --color-brand: #2f6d58; /* 6.1:1 with on-brand */
+  --color-brand-hover: #255847;
+  --color-brand-soft: #e3efe9;
+  --color-brand-ink: #1f4d3e; /* 8.1:1 on brand-soft */
+
+  /* Warm attention: muted amber */
+  --color-attention: #c08a2e;
+  --color-attention-soft: #f7ebd3;
+  --color-attention-ink: #7a4e0e; /* 6.1:1 on attention-soft */
+
+  /* Danger: muted brick */
+  --color-danger: #b4452f; /* 5.5:1 on surface */
+  --color-danger-hover: #9a3a27;
+  --color-danger-soft: #f6e3de;
+  --color-danger-ink: #8e3422; /* 6.4:1 on danger-soft */
+  --color-danger-halo: rgb(180 69 47 / 0.18);
+
+  /* Focus */
+  --color-focus: #2e8c74; /* 4.1:1 on surface, 3.8:1 on canvas */
+  --color-focus-halo: rgb(46 140 116 / 0.22);
+
+  /* Identity tiles (decorative, never the only carrier of meaning) */
+  --color-tile-green-bg: #dcebe3;
+  --color-tile-green-fg: #245443;
+  --color-tile-amber-bg: #f3e6cc;
+  --color-tile-amber-fg: #6e4a12;
+  --color-tile-blue-bg: #dde7f0;
+  --color-tile-blue-fg: #2f5577;
+  --color-tile-rose-bg: #f1e0dc;
+  --color-tile-rose-fg: #7d3b2c;
+  --color-tile-slate-bg: #e3e7e4;
+  --color-tile-slate-fg: #3f4a43;
+
+  /* Shape */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-panel: 20px;
+
+  /* Depth */
+  --shadow-xs: 0 1px 2px rgb(24 33 27 / 0.05);
+  --shadow-card: 0 1px 2px rgb(24 33 27 / 0.06), 0 1px 1px rgb(24 33 27 / 0.02);
+  --shadow-card-hover: 0 6px 14px -8px rgb(24 33 27 / 0.2), 0 1px 2px rgb(24 33 27 / 0.06);
+  --shadow-raised: 0 14px 30px -14px rgb(24 33 27 / 0.3), 0 4px 10px -4px rgb(24 33 27 / 0.1);
+  --shadow-overlay: 0 28px 64px -20px rgb(24 33 27 / 0.32), 0 8px 20px -8px rgb(24 33 27 / 0.1);
+
+  /* Motion */
+  --ease-calm: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme inline {
+  --font-sans:
+    var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-soft);
+    color: var(--color-brand-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  summary {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-text-subtle);
+    opacity: 1;
+  }
+}
+
+@utility scrollbar-calm {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

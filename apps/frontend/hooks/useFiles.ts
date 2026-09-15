@@ -1,12 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-export type FileItem = {
-  id: string;
-  name: string;
-  size: number;
-  mime: string;
-};
+import type { FileItem } from "@/types";
 
 export function useFiles(applicationId: string | null) {
   return useQuery({
